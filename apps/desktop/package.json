@@ -2,13 +2,16 @@
   "name": "@app/desktop",
   "version": "0.1.0",
   "private": true,
+  "main": "dist/electron/main.js",
   "scripts": {
-    "dev": "next dev",
-    "build": "next build",
+    "dev": "concurrently -k \"next dev\" \"npm run build:electron && wait-on http://localhost:3000 && cross-env NODE_ENV=development electron .\"",
+    "build": "next build && npm run build:electron",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "build:electron": "tsc -p electron/tsconfig.json --outDir dist/electron"
   },
   "dependencies": {
+    "@app/shared": "*",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "date-fns": "^4.4.0",
@@ -27,9 +30,14 @@
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "concurrently": "^9",
+    "cross-env": "^7",
+    "electron": "^33",
+    "electron-builder": "^25",
     "eslint": "^9",
     "eslint-config-next": "16.2.6",
     "tailwindcss": "^4",
-    "typescript": "^5"
+    "typescript": "^5",
+    "wait-on": "^8"
   }
 }

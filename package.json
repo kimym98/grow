@@ -6,6 +6,11 @@
     "apps/*",
     "packages/*"
   ],
+  "scripts": {
+    "dev": "npm run dev -w apps/desktop",
+    "build": "npm run build -w apps/desktop",
+    "lint": "npm run lint --workspaces --if-present"
+  },
   "devDependencies": {
     "@types/node": "^20",
     "eslint": "^9",
