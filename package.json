@@ -1,0 +1,14 @@
+{
+  "name": "grow-workspace",
+  "version": "0.1.0",
+  "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "devDependencies": {
+    "@types/node": "^20",
+    "eslint": "^9",
+    "typescript": "^5"
+  }
+}

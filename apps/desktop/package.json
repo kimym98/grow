@@ -1,5 +1,5 @@
 {
-  "name": "claude-nextjs-starter",
+  "name": "@app/desktop",
   "version": "0.1.0",
   "private": true,
   "scripts": {
