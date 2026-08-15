@@ -1,24 +1,8 @@
 export interface NavItem {
   label: string
   href: string
+  icon?: React.ComponentType<{ className?: string }>
   external?: boolean
-}
-
-export interface FeatureItem {
-  icon: React.ComponentType<{ className?: string }>
-  title: string
-  description: string
-}
-
-export interface StatItem {
-  value: string
-  label: string
-  description?: string
-}
-
-export interface FaqItem {
-  question: string
-  answer: string
 }
 
 export interface ApiResponse<T> {

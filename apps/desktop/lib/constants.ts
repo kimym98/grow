@@ -1,35 +1,54 @@
+import {
+  Briefcase,
+  Calendar,
+  FileText,
+  HelpCircle,
+  LayoutDashboard,
+  Newspaper,
+  Settings,
+} from "lucide-react"
 import type { NavItem, SiteConfig } from "@/types"
 
 export const SITE_CONFIG: SiteConfig = {
-  name: "Next.js Starter Kit",
-  description: "모던 웹 개발을 위한 Next.js 16 스타터 킷",
+  name: "AI 취업 비서",
+  description: "IT 취업 준비생을 위한 공고 탐색·서류 첨삭·면접 준비·일정 관리 올인원 워크스페이스",
   url: "https://example.com",
 }
 
 export const NAV_ITEMS: NavItem[] = [
   {
-    label: "기능",
-    href: "#features",
+    label: "대시보드",
+    href: "/",
+    icon: LayoutDashboard,
   },
   {
-    label: "FAQ",
-    href: "#faq",
+    label: "공고",
+    href: "/jobs",
+    icon: Briefcase,
   },
   {
-    label: "GitHub",
-    href: "https://github.com",
-    external: true,
+    label: "캘린더",
+    href: "/calendar",
+    icon: Calendar,
+  },
+  {
+    label: "뉴스",
+    href: "/news",
+    icon: Newspaper,
+  },
+  {
+    label: "문서",
+    href: "/documents",
+    icon: FileText,
+  },
+  {
+    label: "퀴즈",
+    href: "/quiz",
+    icon: HelpCircle,
+  },
+  {
+    label: "설정",
+    href: "/settings",
+    icon: Settings,
   },
 ]
-
-export const FOOTER_LINKS = {
-  product: [
-    { label: "기능", href: "#features" },
-    { label: "문서", href: "/docs" },
-  ],
-  company: [
-    { label: "소개", href: "/about" },
-    { label: "블로그", href: "/blog" },
-    { label: "연락처", href: "/contact" },
-  ],
-}
