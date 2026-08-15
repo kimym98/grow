@@ -27,3 +27,22 @@ export const registerSchema = z
     message: "비밀번호가 일치하지 않습니다",
     path: ["confirmPassword"],
   })
+
+export const scheduleCategorySchema = z.enum([
+  "interview",
+  "deadline",
+  "study",
+  "etc",
+])
+
+export const scheduleFormSchema = z.object({
+  title: z.string().min(1, "제목을 입력해주세요"),
+  memo: z.string().optional(),
+  date: z.string().min(1, "날짜를 선택해주세요"),
+  time: z.string().optional(),
+  reminderTime: z.string().optional(),
+  isRecurring: z.boolean(),
+  category: scheduleCategorySchema,
+})
+
+export type ScheduleFormValues = z.infer<typeof scheduleFormSchema>
