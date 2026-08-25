@@ -16,6 +16,24 @@ import { NewsCard } from "@/components/sections/news/news-card";
 /** 오늘 뉴스가 없을 때 폴백으로 보여줄 최근 뉴스 개수 */
 const FALLBACK_COUNT = 6;
 
+/** 뉴스 카드 배경색 팔레트 */
+const CARD_BACKGROUND_COLORS = [
+  "#FFF6DF",
+  "#F9E1D2",
+  "#FFF1B8",
+  "#F6CDC4",
+  "#F8DDE3",
+  "#F0E4F5",
+  "#E6DDF4",
+  "#F8F3EA",
+  "#EFE4D6",
+  "#DDE8D5",
+  "#DDF2EA",
+  "#DDEDF7",
+  "#D7E3F4",
+  "#FFFFFF",
+];
+
 /**
  * 대시보드 상단에 표시되는 "오늘의 뉴스" 캐러셀
  * 당일(isToday) 뉴스만 필터링해 노출하고, 0건이면 최근순 상위 N개로 폴백한다.
@@ -41,6 +59,19 @@ function TodayNewsCarousel() {
 
     return { items: recentNews, isFallback: true };
   }, [newsList]);
+
+  const cardColorMap = useMemo(() => {
+    const map = new Map<string, string>();
+    items.forEach((news) => {
+      const randomColor =
+        CARD_BACKGROUND_COLORS[
+          Math.floor(Math.random() * CARD_BACKGROUND_COLORS.length)
+        ];
+      map.set(news.id, randomColor);
+    });
+    return map;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [items.map((news) => news.id).join(",")]);
 
   function toggleBookmark(id: string) {
     setNewsList((prev) =>
@@ -77,6 +108,7 @@ function TodayNewsCarousel() {
                 news={news}
                 onToggleBookmark={toggleBookmark}
                 className="h-full border border-white/20"
+                backgroundColor={cardColorMap.get(news.id)}
               />
             </CarouselItem>
           ))}

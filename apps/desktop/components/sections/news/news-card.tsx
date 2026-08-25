@@ -1,3 +1,7 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import { useTheme } from "next-themes";
 import { Bookmark, BookmarkCheck } from "lucide-react";
 import type { TechNewsFixture } from "@app/shared";
 
@@ -19,17 +23,44 @@ interface NewsCardProps {
   onToggleBookmark?: (id: string) => void;
   /** 카드 루트에 추가할 클래스 */
   className?: string;
+  /** 카드 배경색 (랜덤 팔레트에서 선택) */
+  backgroundColor?: string;
 }
 
 /**
  * 개별 뉴스 카드 마크업 (Badge + 제목 링크 + 요약 + 북마크 버튼)
  * news-feed, today-news-carousel 등에서 재사용
  */
-function NewsCard({ news, onToggleBookmark, className }: NewsCardProps) {
+function NewsCard({
+  news,
+  onToggleBookmark,
+  className,
+  backgroundColor,
+}: NewsCardProps) {
+  const [mounted, setMounted] = useState(false);
+  const { resolvedTheme } = useTheme();
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  const appliedBackgroundColor =
+    mounted && resolvedTheme !== "dark" ? backgroundColor : undefined;
+
   return (
-    <Card className={className}>
+    <Card
+      className={className}
+      style={
+        appliedBackgroundColor
+          ? { backgroundColor: appliedBackgroundColor }
+          : undefined
+      }
+    >
       <CardHeader className="flex flex-col items-start gap-4">
-        <Badge variant="outline" className="w-fit border-white/50">
+        <Badge
+          variant="outline"
+          className="w-fit border-black/50 dark:border-white/50"
+        >
           {news.source}
         </Badge>
         <CardTitle>
