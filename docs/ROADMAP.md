@@ -116,20 +116,22 @@ AI 취업 비서는 IT 직군 취업 준비생을 위한 노션형 올인원 데
 
 ### Phase 3: 핵심 기능 구현
 
-- **Task 008: 공통 타입·스키마 정의 및 데이터베이스 스키마 설계** - 우선순위
+- ✅ **Task 008: 공통 타입·스키마 정의 및 데이터베이스 스키마 설계** - 우선순위
   - `packages/shared/types`에 도메인 타입 정의: `JobPosting`, `Schedule`, `TechNews`, `DocumentReview`, `CsQuestion`, `QuizSession`, `UserAnswer`
   - Zod 스키마(`packages/shared/schemas`) 및 API 응답/에러 타입 정의
   - Supabase 테이블 스키마 설계 문서화(컬럼, 인덱스, upsert 고유키, RLS 정책 초안) — 실제 마이그레이션 실행은 Task 009
   - LLM Provider 인터페이스(`LlmProvider`) 및 알림 트리거 판단 로직 인터페이스를 shared에 선언(구현 제외)
   - Supabase 프로젝트 생성 및 환경 변수(.env) 구조 정의, 클라이언트 초기화 골격
+  - See: /docs/database-schema.md
 
-- **Task 009: Supabase 스키마 마이그레이션 및 인증/권한 구현(구글 로그인)** - 우선순위
+- ✅ **Task 009: Supabase 스키마 마이그레이션 및 인증/권한 구현(구글 로그인)** - 우선순위
   - 설계된 테이블 마이그레이션 적용(`job_postings`, `schedules`, `tech_news`, `document_reviews`, `cs_questions`, `quiz_sessions`, `user_answers`)
   - RLS 정책 적용(사용자 소유 데이터 접근 제한), 인덱스 및 upsert 고유키 제약 설정
   - Supabase Auth 구글 OAuth 연동, Electron 딥링크 기반 로그인 콜백 처리
   - Task 003에서 만든 로그인 화면의 구글 버튼에 실제 OAuth 플로우 연결
   - 세션 저장/복원, 보호 라우트 가드, 로그아웃 처리
   - Playwright MCP로 로그인/로그아웃/보호 라우트 접근 차단 E2E 테스트
+  - See: /tasks/009-supabase-migration-auth.md (Google Cloud Console 리디렉션 URI 추가 완료, 실제 로그인 완료 플로우 재검증 예정)
 
 - **Task 010: 채용 공고 수집 Edge Function 및 목록 연동**
   - Supabase Edge Function 구현: 공식 API/RSS 파싱 → 정규화 → URL/고유키 upsert
