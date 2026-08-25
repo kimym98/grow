@@ -2,6 +2,8 @@ import type { Metadata } from "next"
 import { DM_Sans, IBM_Plex_Mono, Lora } from "next/font/google"
 import "./globals.css"
 import { ThemeProvider } from "@/providers/theme-provider"
+import { AuthProvider } from "@/providers/auth-provider"
+import { AuthGuard } from "@/components/auth/auth-guard"
 import { Toaster } from "@/components/ui/sonner"
 import { AppShell } from "@/components/layout/app-shell"
 import { SITE_CONFIG } from "@/lib/constants"
@@ -45,8 +47,12 @@ export default function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
-          <AppShell>{children}</AppShell>
-          <Toaster />
+          <AuthProvider>
+            <AppShell>
+              <AuthGuard>{children}</AuthGuard>
+            </AppShell>
+            <Toaster />
+          </AuthProvider>
         </ThemeProvider>
       </body>
     </html>

@@ -12,6 +12,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+import { useAuth } from "@/providers/auth-provider"
 
 /** 실제 인증 연동 전까지 사용하는 목업 유저 정보 */
 const MOCK_USER = {
@@ -27,9 +28,11 @@ function getInitial(name: string) {
 /** 사이드바 하단에 노출되는 유저 프로필 (아바타 + 이름/이메일 + 드롭다운 메뉴) */
 function UserProfile() {
   const router = useRouter()
+  const { signOut } = useAuth()
 
-  function handleLogout() {
-    router.push("/login")
+  async function handleLogout() {
+    await signOut()
+    router.replace("/login")
   }
 
   return (

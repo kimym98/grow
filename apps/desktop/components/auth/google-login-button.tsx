@@ -1,9 +1,10 @@
 "use client"
 
 import { useState } from "react"
-import { useRouter } from "next/navigation"
+import { toast } from "sonner"
 import { Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { supabase } from "@/lib/supabase"
 
 function GoogleIcon() {
   return (
@@ -30,13 +31,18 @@ function GoogleIcon() {
 
 export function GoogleLoginButton() {
   const [isLoading, setIsLoading] = useState(false)
-  const router = useRouter()
 
-  function handleClick() {
+  async function handleClick() {
     setIsLoading(true)
-    setTimeout(() => {
-      router.push("/")
-    }, 600)
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: "google",
+      options: { redirectTo: "grow://auth/callback" },
+    })
+    if (error) {
+      toast.error("구글 로그인에 실패했습니다. 다시 시도해 주세요.")
+      setIsLoading(false)
+    }
+    // 성공 시 OS 기본 브라우저로 이동 → grow:// 딥링크 콜백을 AuthProvider가 처리
   }
 
   return (
