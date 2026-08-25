@@ -108,3 +108,8 @@ components/
 - `clsx + tailwind-merge`: className 병합 유틸
 - `date-fns`: 날짜 포맷팅
 - `lucide-react`: 아이콘 라이브러리
+
+## 실행 전 고려 사항
+
+- 질문에 대한 추측이나 추론은 하지 않고 모호한 부분은 다시 질문
+- 수정 사항이 많다면 질문 후 수정한다
