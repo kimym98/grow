@@ -25,3 +25,14 @@ export interface SiteConfig {
   description: string
   url: string
 }
+
+export interface ElectronApi {
+  ping: () => string
+  onAuthCallback: (callback: (url: string) => void) => () => void
+}
+
+declare global {
+  interface Window {
+    electronAPI?: ElectronApi
+  }
+}
