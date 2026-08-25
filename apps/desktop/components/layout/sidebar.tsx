@@ -4,6 +4,7 @@ import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { NAV_ITEMS, SITE_CONFIG } from "@/lib/constants"
 import { ThemeToggle } from "@/components/layout/theme-toggle"
+import { UserProfile } from "@/components/layout/user-profile"
 import { cn } from "@/lib/utils"
 
 export function Sidebar() {
@@ -11,10 +12,15 @@ export function Sidebar() {
 
   return (
     <aside className="hidden md:flex w-60 shrink-0 flex-col border-r border-border/40 bg-background">
-      <div className="flex h-16 items-center px-4">
+      <div className="flex h-16 items-center justify-between px-4">
         <Link href="/" className="font-bold text-lg">
           {SITE_CONFIG.name}
         </Link>
+        <ThemeToggle />
+      </div>
+
+      <div className="border-b border-border/40 p-2">
+        <UserProfile />
       </div>
 
       <nav className="flex-1 flex flex-col gap-1 px-2">
@@ -41,10 +47,6 @@ export function Sidebar() {
           )
         })}
       </nav>
-
-      <div className="flex items-center justify-end p-3">
-        <ThemeToggle />
-      </div>
     </aside>
   )
 }

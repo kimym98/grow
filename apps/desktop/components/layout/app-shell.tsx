@@ -33,7 +33,7 @@ export function AppShell({ children }: AppShellProps) {
           <ThemeToggle />
         </header>
 
-        <main className="flex-1 overflow-y-auto">{children}</main>
+        <main className="flex-1 overflow-x-hidden overflow-y-auto">{children}</main>
       </div>
     </div>
   )

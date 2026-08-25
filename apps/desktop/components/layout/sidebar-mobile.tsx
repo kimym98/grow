@@ -12,6 +12,7 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet"
+import { UserProfile } from "@/components/layout/user-profile"
 import { cn } from "@/lib/utils"
 
 export function SidebarMobile() {
@@ -25,11 +26,14 @@ export function SidebarMobile() {
           <span className="sr-only">메뉴 열기</span>
         </Button>
       </SheetTrigger>
-      <SheetContent side="left" className="w-[240px]">
+      <SheetContent side="left" className="flex w-[240px] flex-col">
         <SheetHeader>
           <SheetTitle>네비게이션</SheetTitle>
         </SheetHeader>
-        <nav className="flex flex-col gap-1 px-2 mt-4">
+        <div className="border-b border-border/40 p-2">
+          <UserProfile />
+        </div>
+        <nav className="flex flex-1 flex-col gap-1 px-2 mt-4">
           {NAV_ITEMS.map((item) => {
             const isActive =
               pathname === item.href ||
