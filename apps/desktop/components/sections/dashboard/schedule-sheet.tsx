@@ -6,7 +6,7 @@ import { useForm } from "react-hook-form"
 import { format, parseISO } from "date-fns"
 import { ko } from "date-fns/locale"
 import { CalendarIcon, Plus } from "lucide-react"
-import type { ScheduleChecklistItem, ScheduleFixture } from "@app/shared"
+import type { Schedule, ScheduleChecklistItem } from "@app/shared"
 
 import { scheduleFormSchema, type ScheduleFormValues } from "@/lib/validators"
 import { Badge } from "@/components/ui/badge"
@@ -45,12 +45,13 @@ interface ScheduleSheetProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   date: Date
-  schedules: ScheduleFixture[]
+  schedules: Schedule[]
   onSubmit: (values: ScheduleFormValues, editingId?: string) => void
   onChecklistChange: (scheduleId: string, checklist: ScheduleChecklistItem[]) => void
+  onDelete: (scheduleId: string) => void
 }
 
-function toFormValues(schedule: ScheduleFixture): ScheduleFormValues {
+function toFormValues(schedule: Schedule): ScheduleFormValues {
   return {
     title: schedule.title,
     memo: schedule.memo ?? "",
@@ -86,6 +87,7 @@ function ScheduleSheet({
   schedules,
   onSubmit,
   onChecklistChange,
+  onDelete,
 }: ScheduleSheetProps) {
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -102,6 +104,7 @@ function ScheduleSheet({
             schedules={schedules}
             onSubmit={onSubmit}
             onChecklistChange={onChecklistChange}
+            onDelete={onDelete}
           />
         ) : null}
       </SheetContent>
@@ -111,21 +114,28 @@ function ScheduleSheet({
 
 interface ScheduleSheetBodyProps {
   date: Date
-  schedules: ScheduleFixture[]
+  schedules: Schedule[]
   onSubmit: (values: ScheduleFormValues, editingId?: string) => void
   onChecklistChange: (scheduleId: string, checklist: ScheduleChecklistItem[]) => void
+  onDelete: (scheduleId: string) => void
 }
 
-function ScheduleSheetBody({ date, schedules, onSubmit, onChecklistChange }: ScheduleSheetBodyProps) {
+function ScheduleSheetBody({
+  date,
+  schedules,
+  onSubmit,
+  onChecklistChange,
+  onDelete,
+}: ScheduleSheetBodyProps) {
   const [mode, setMode] = useState<"list" | "form">(schedules.length > 0 ? "list" : "form")
-  const [editingSchedule, setEditingSchedule] = useState<ScheduleFixture | null>(null)
+  const [editingSchedule, setEditingSchedule] = useState<Schedule | null>(null)
 
   function openCreateForm() {
     setEditingSchedule(null)
     setMode("form")
   }
 
-  function openEditForm(schedule: ScheduleFixture) {
+  function openEditForm(schedule: Schedule) {
     setEditingSchedule(schedule)
     setMode("form")
   }
@@ -142,6 +152,7 @@ function ScheduleSheetBody({ date, schedules, onSubmit, onChecklistChange }: Sch
       onEdit={openEditForm}
       onCreate={openCreateForm}
       onChecklistChange={onChecklistChange}
+      onDelete={onDelete}
     />
   ) : (
     <ScheduleFormView
@@ -156,13 +167,20 @@ function ScheduleSheetBody({ date, schedules, onSubmit, onChecklistChange }: Sch
 }
 
 interface ScheduleListViewProps {
-  schedules: ScheduleFixture[]
-  onEdit: (schedule: ScheduleFixture) => void
+  schedules: Schedule[]
+  onEdit: (schedule: Schedule) => void
   onCreate: () => void
   onChecklistChange: (scheduleId: string, checklist: ScheduleChecklistItem[]) => void
+  onDelete: (scheduleId: string) => void
 }
 
-function ScheduleListView({ schedules, onEdit, onCreate, onChecklistChange }: ScheduleListViewProps) {
+function ScheduleListView({
+  schedules,
+  onEdit,
+  onCreate,
+  onChecklistChange,
+  onDelete,
+}: ScheduleListViewProps) {
   return (
     <div className="flex flex-1 flex-col gap-4 overflow-y-auto px-4">
       <Button type="button" size="sm" className="self-start" onClick={onCreate}>
@@ -187,6 +205,14 @@ function ScheduleListView({ schedules, onEdit, onCreate, onChecklistChange }: Sc
                 <Badge variant="outline">{CATEGORY_LABELS[schedule.category]}</Badge>
                 <Button type="button" variant="outline" size="sm" onClick={() => onEdit(schedule)}>
                   수정
+                </Button>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => onDelete(schedule.id)}
+                >
+                  삭제
                 </Button>
               </div>
             </div>

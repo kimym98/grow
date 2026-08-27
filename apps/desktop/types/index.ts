@@ -29,6 +29,12 @@ export interface SiteConfig {
 export interface ElectronApi {
   ping: () => string
   onAuthCallback: (callback: (url: string) => void) => () => void
+  /** 최신 일정 목록을 Electron 메인 프로세스에 동기화한다 (메인은 Supabase 인증 정보가 없어 렌더러가 push) */
+  syncSchedules: (schedules: import("@app/shared").Schedule[]) => void
+  /** 알림 설정 값을 Electron 메인 프로세스에 동기화한다 */
+  syncNotificationSettings: (
+    settings: import("@/lib/notification-settings").NotificationSettingsValue
+  ) => void
 }
 
 declare global {

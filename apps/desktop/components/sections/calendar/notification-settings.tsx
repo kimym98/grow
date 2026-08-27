@@ -1,19 +1,38 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { BellRing } from "lucide-react"
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
+import {
+  loadNotificationSettings,
+  saveNotificationSettings,
+  type NotificationSettingsValue,
+} from "@/lib/notification-settings"
 
 function NotificationSettings() {
-  const [dailySummaryEnabled, setDailySummaryEnabled] = useState(true)
-  const [dailySummaryTime, setDailySummaryTime] = useState("09:00")
-  const [scheduledAlertEnabled, setScheduledAlertEnabled] = useState(true)
+  const [settings, setSettings] = useState<NotificationSettingsValue>(loadNotificationSettings)
+  const { dailySummaryEnabled, dailySummaryTime, scheduledAlertEnabled } = settings
 
-  // 실제 알림 발송/저장 로직은 Task 011(Electron 네이티브 알림 구현)에서 연동 예정
+  useEffect(() => {
+    saveNotificationSettings(settings)
+    window.electronAPI?.syncNotificationSettings(settings)
+  }, [settings])
+
+  function setDailySummaryEnabled(value: boolean) {
+    setSettings((prev) => ({ ...prev, dailySummaryEnabled: value }))
+  }
+
+  function setDailySummaryTime(value: string) {
+    setSettings((prev) => ({ ...prev, dailySummaryTime: value }))
+  }
+
+  function setScheduledAlertEnabled(value: boolean) {
+    setSettings((prev) => ({ ...prev, scheduledAlertEnabled: value }))
+  }
 
   return (
     <Card>

@@ -1,6 +1,6 @@
-import type { ScheduleFixture } from "@app/shared"
+import type { Schedule } from "@app/shared"
 
-export const CATEGORY_LABELS: Record<ScheduleFixture["category"], string> = {
+export const CATEGORY_LABELS: Record<Schedule["category"], string> = {
   interview: "면접",
   deadline: "마감",
   study: "스터디",

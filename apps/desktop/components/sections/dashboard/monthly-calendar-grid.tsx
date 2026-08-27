@@ -15,7 +15,7 @@ import {
 } from "date-fns";
 import { ko } from "date-fns/locale";
 import { ChevronLeft, ChevronRight } from "lucide-react";
-import type { ScheduleFixture } from "@app/shared";
+import type { Schedule } from "@app/shared";
 
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -30,7 +30,7 @@ interface MonthlyCalendarGridProps {
   /** 표시 대상 월 (해당 월의 아무 날짜나 전달) */
   month: Date;
   /** 날짜별 일정 목록 조회 함수 (실제 필터링 로직은 상위에서 주입) */
-  getSchedulesForDate: (date: Date) => ScheduleFixture[];
+  getSchedulesForDate: (date: Date) => Schedule[];
   /** 현재 선택된 날짜 */
   selectedDate?: Date;
   /** 날짜 셀 클릭 콜백 */

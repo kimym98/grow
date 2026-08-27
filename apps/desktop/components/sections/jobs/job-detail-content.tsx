@@ -1,8 +1,13 @@
+"use client"
+
+import { useState } from "react"
 import Link from "next/link"
+import { toast } from "sonner"
 import type { JobPosting } from "@app/shared"
 
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
+import { createSchedule } from "@/lib/schedules"
 
 interface JobDetailContentProps {
   job: JobPosting
@@ -21,6 +26,27 @@ function getDDay(deadline: string | null) {
 function JobDetailContent({ job }: JobDetailContentProps) {
   const dDay = getDDay(job.deadline)
   const dDayLabel = dDay === null ? "상시채용" : dDay < 0 ? "마감" : dDay === 0 ? "D-Day" : `D-${dDay}`
+  const [isSubmitting, setIsSubmitting] = useState(false)
+
+  async function handleAddToSchedule() {
+    if (!job.deadline) return
+
+    setIsSubmitting(true)
+    try {
+      await createSchedule({
+        title: `[마감] ${job.title}`,
+        date: job.deadline,
+        category: "deadline",
+        isRecurring: false,
+        checklist: [],
+      })
+      toast.success("일정에 추가되었습니다")
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "일정 추가에 실패했습니다")
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
 
   return (
     <div className="flex flex-col gap-6 p-6">
@@ -50,7 +76,11 @@ function JobDetailContent({ job }: JobDetailContentProps) {
             원본 공고 보기
           </Link>
         </Button>
-        <Button disabled title="준비 중인 기능입니다">
+        <Button
+          onClick={handleAddToSchedule}
+          disabled={!job.deadline || isSubmitting}
+          title={job.deadline ? undefined : "마감일이 없는 공고입니다"}
+        >
           일정에 추가
         </Button>
       </div>

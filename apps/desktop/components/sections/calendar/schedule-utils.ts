@@ -1,7 +1,7 @@
 import { isSameDay } from "date-fns"
-import type { ScheduleFixture } from "@app/shared"
+import type { Schedule } from "@app/shared"
 
-function getSchedulesOnDate(schedules: ScheduleFixture[], date: Date) {
+function getSchedulesOnDate(schedules: Schedule[], date: Date) {
   return schedules.filter((schedule) => isSameDay(new Date(schedule.date), date))
 }
 
