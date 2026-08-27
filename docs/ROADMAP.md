@@ -50,6 +50,7 @@ AI 취업 비서는 IT 직군 취업 준비생을 위한 노션형 올인원 데
 - **Edge Function**: `supabase functions serve`로 로컬 테스트 후 배포, `pg_cron` 스케줄 등록 확인
 - **API 연동 및 비즈니스 로직 구현 시 Playwright MCP로 렌더러(Next.js) 화면 E2E 테스트 수행 필수**
   - 렌더러는 `next dev` 서버(localhost)로도 접근 가능하므로 Playwright MCP는 웹 렌더러 대상으로 실행
+  - 대부분의 화면이 `AuthGuard`로 보호되므로, `/login` 화면의 "테스트 계정으로 로그인 (개발용)" 버튼(개발 빌드에서만 노출, `apps/desktop/lib/auth-test.ts`)으로 로그인한 뒤 보호된 라우트를 테스트한다. Google OAuth 딥링크 플로우는 Playwright로 자동화할 수 없으므로 이 버튼이 유일한 자동화 경로다.
   - Electron 메인 프로세스 전용 기능(네이티브 알림, 파일 시스템)은 Electron 앱 수동 검증으로 보완
 - **PDF 첨삭**: 실제 샘플 PDF로 업로드 → 추출 → LLM 응답까지 수동 테스트
 - 각 단계 후 작업 파일 내 진행 상황 업데이트, 테스트 통과 확인 후 다음 단계로 진행
@@ -139,16 +140,18 @@ AI 취업 비서는 IT 직군 취업 준비생을 위한 노션형 올인원 데
   - ✅ 직무 필터(`duty` 쿼리) 적용: 프론트엔드개발자·AI/ML엔지니어·AI/ML연구원 직무로 한정 수집
   - ✅ `pg_cron` 1일 2회(KST 09:00/18:00) 스케줄 등록(Supabase Vault로 서비스 키 보안 관리), 실행 로그(`job_collection_logs`) 기록
   - ✅ 렌더러 데이터 레이어 연결: 더미 데이터를 실제 Supabase 조회(필터/검색/상세)로 교체
-  - ✅ 검증: `supabase functions serve` 로컬 테스트 후 배포, pg_cron 수동 트리거로 실제 수집 확인. Playwright MCP는 앱의 Google OAuth AuthGuard로 인해 완전한 클릭 E2E는 제한되어 서버 렌더링 검증으로 대체
+  - ✅ 검증: `supabase functions serve` 로컬 테스트 후 배포, pg_cron 수동 트리거로 실제 수집 확인. 당시에는 앱의 Google OAuth AuthGuard로 인해 완전한 클릭 E2E가 제한되어 서버 렌더링 검증으로 대체했으나, Task 011에서 추가된 테스트 계정 로그인 버튼으로 이후 Task부터는 클릭 E2E가 가능해짐
   - 자소설닷컴/캐치(Catch)는 실제 목록 로딩 방식(정적 HTML vs 내부 API) 미확인으로 이번 범위에서 제외, 후속 Task로 이월
   - See: /docs/job-source-research.md
 
-- **Task 011: 일정관리 CRUD 및 Electron 네이티브 알림 구현**
-  - `schedules` CRUD 연동, 캘린더/오늘 요약을 실데이터로 교체
-  - 공고 마감일 → "일정에 추가" 액션 연동
-  - 알림 트리거 판단 로직을 `packages/shared`에 플랫폼 독립적으로 구현
-  - Electron 메인 프로세스에서 `Notification` API 발송, 로컬 스케줄러(node-schedule)로 지정 시각 알림 + 당일 요약 알림
-  - 검증: Playwright MCP로 일정 CRUD 플로우 E2E 테스트, 알림 발송은 Electron 앱 수동 검증
+- ✅ **Task 011: 일정관리 CRUD 및 Electron 네이티브 알림 구현**
+  - ✅ `schedules` CRUD 연동, 캘린더를 mock에서 Supabase 실데이터로 완전히 교체(생성/조회/수정/삭제)
+  - ✅ 공고 마감일 → "일정에 추가" 액션 연동(`category: deadline`), 상시채용 공고는 버튼 비활성
+  - ✅ 알림 트리거 판단 로직을 `packages/shared`에 플랫폼 독립적으로 구현(순수 함수), 당일 요약 알림 시각 등 설정은 `localStorage`에 저장(별도 DB 테이블 없음, 이번 스코프의 의도된 결정)
+  - ✅ Electron 메인 프로세스에서 `Notification` API 발송, `node-schedule` 로컬 스케줄러(1분 폴링)로 지정 시각 알림 + 당일 요약 알림. 메인 프로세스는 Supabase 인증 정보가 없어 렌더러가 IPC로 최신 일정/설정을 push하는 구조. `packages/shared`를 Electron 메인 런타임에서 직접 require할 수 없어 트리거 로직을 `electron/notification-trigger.ts`에 복제(수정 시 양쪽 동기화 필요)
+  - ✅ `/login`에 개발 전용 테스트 계정 로그인 버튼 추가 — Google OAuth 딥링크로는 불가능했던 인증 필요 화면의 Playwright MCP 클릭 E2E가 이후 Task부터 가능해짐(프로덕션 빌드에는 미포함)
+  - ✅ 검증: Playwright MCP로 테스트 계정 로그인 → 일정 생성/삭제 → 공고 상세 "일정에 추가" E2E 테스트, Supabase SQL로 실제 반영 확인. 실제 OS 알림 발송은 Electron `BrowserWindow`를 Playwright로 제어할 수 없어 자동화 불가 — 사용자의 Electron 앱 수동 검증 필요
+  - See: /tasks/011-schedule-crud-notifications.md
 
 - **Task 012: IT 뉴스 수집 Edge Function 및 피드 연동**
   - 공고 수집과 동일 패턴 재사용한 RSS 수집 Edge Function + `pg_cron` 스케줄
