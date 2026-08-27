@@ -2,8 +2,10 @@
 
 import { useEffect, useState } from "react"
 import { useTheme } from "next-themes"
-import { Sun, Moon } from "lucide-react"
-import { Button } from "@/components/ui/button"
+import { Switch as SwitchPrimitive } from "radix-ui"
+import { Moon, Sun } from "lucide-react"
+
+import { cn } from "@/lib/utils"
 
 export function ThemeToggle() {
   const [mounted, setMounted] = useState(false)
@@ -13,22 +15,33 @@ export function ThemeToggle() {
     setMounted(true)
   }, [])
 
-  if (!mounted) {
-    return <Button variant="ghost" size="icon" disabled aria-label="테마 전환" />
-  }
+  const isDark = mounted && theme === "dark"
 
   return (
-    <Button
-      variant="ghost"
-      size="icon"
-      onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+    <SwitchPrimitive.Root
+      checked={isDark}
+      onCheckedChange={(checked) => setTheme(checked ? "dark" : "light")}
+      disabled={!mounted}
       aria-label="테마 전환"
-    >
-      {theme === "dark" ? (
-        <Sun className="size-4" />
-      ) : (
-        <Moon className="size-4" />
+      className={cn(
+        "relative inline-flex h-6 w-11 shrink-0 items-center rounded-full outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:opacity-50",
+        isDark ? "bg-zinc-900" : "bg-slate-200"
       )}
-    </Button>
+    >
+      <SwitchPrimitive.Thumb
+        className={cn(
+          "pointer-events-none flex size-5 items-center justify-center rounded-full shadow-sm ring-0 transition-transform",
+          isDark
+            ? "translate-x-[22px] bg-orange-200"
+            : "translate-x-0.5 bg-white"
+        )}
+      >
+        {isDark ? (
+          <Moon className="size-3 text-zinc-700" fill="currentColor" />
+        ) : (
+          <Sun className="size-3 text-amber-500" />
+        )}
+      </SwitchPrimitive.Thumb>
+    </SwitchPrimitive.Root>
   )
 }
