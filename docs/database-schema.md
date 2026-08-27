@@ -29,6 +29,7 @@ Supabase 프로젝트는 이미 생성되어 있다(`grow`, ref: `ciyscihtgpiiko
 | tags | text[] | NOT NULL | '{}' | 직무/기술 태그 |
 | url | text | NOT NULL | | 상세 페이지 원본 링크 |
 | source_url | text | NOT NULL | | 수집 소스 고유 URL (upsert 키) |
+| source | text | NOT NULL | | 수집 플랫폼 구분(예: 'jobkorea'). 크롤링 소스가 다시 여러 개로 확장될 가능성을 대비해 재도입(Task 010, 2026-08-26) |
 | created_at | timestamptz | NOT NULL | now() | 수집 일시 |
 | updated_at | timestamptz | NOT NULL | now() | 최종 갱신 일시 |
 
@@ -48,6 +49,7 @@ create table job_postings (
   tags text[] not null default '{}',
   url text not null,
   source_url text not null unique,
+  source text not null,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );

@@ -133,12 +133,15 @@ AI 취업 비서는 IT 직군 취업 준비생을 위한 노션형 올인원 데
   - Playwright MCP로 로그인/로그아웃/보호 라우트 접근 차단 E2E 테스트
   - See: /tasks/009-supabase-migration-auth.md (Google Cloud Console 리디렉션 URI 추가 완료, 실제 로그인 완료 플로우 재검증 예정)
 
-- **Task 010: 채용 공고 수집 Edge Function 및 목록 연동**
-  - Supabase Edge Function 구현: 공식 API/RSS 파싱 → 정규화 → URL/고유키 upsert
-  - 소스별 어댑터 구조와 이용약관/robots.txt 확인 결과 문서화
-  - `pg_cron` 1일 1~2회 스케줄 등록, 실행 로그/실패 재시도 처리
-  - 렌더러 데이터 레이어 연결: 더미 데이터를 실제 조회(필터/검색/상세)로 교체
-  - 검증: `supabase functions serve` 로컬 테스트 후 배포, Playwright MCP로 목록/필터/검색/상세 E2E 테스트
+- ✅ **Task 010: 채용 공고 수집 Edge Function 및 목록 연동**
+  - ✅ Supabase Edge Function 구현: 고용24(work24) 공식 API는 개인회원 사용 불가로 최종 blocked 확정, 잡코리아(JobKorea) robots.txt가 허용한 `/recruit/joblist` HTML 크롤링으로 전환 → 정규화 → `source_url` 고유키 upsert
+  - ✅ 소스 어댑터 구조(`JobPostingSource`/`NormalizedJobPosting`) 및 robots.txt 확인 결과 문서화, `job_postings.source` 컬럼 추가(플랫폼 구분)
+  - ✅ 직무 필터(`duty` 쿼리) 적용: 프론트엔드개발자·AI/ML엔지니어·AI/ML연구원 직무로 한정 수집
+  - ✅ `pg_cron` 1일 2회(KST 09:00/18:00) 스케줄 등록(Supabase Vault로 서비스 키 보안 관리), 실행 로그(`job_collection_logs`) 기록
+  - ✅ 렌더러 데이터 레이어 연결: 더미 데이터를 실제 Supabase 조회(필터/검색/상세)로 교체
+  - ✅ 검증: `supabase functions serve` 로컬 테스트 후 배포, pg_cron 수동 트리거로 실제 수집 확인. Playwright MCP는 앱의 Google OAuth AuthGuard로 인해 완전한 클릭 E2E는 제한되어 서버 렌더링 검증으로 대체
+  - 자소설닷컴/캐치(Catch)는 실제 목록 로딩 방식(정적 HTML vs 내부 API) 미확인으로 이번 범위에서 제외, 후속 Task로 이월
+  - See: /docs/job-source-research.md
 
 - **Task 011: 일정관리 CRUD 및 Electron 네이티브 알림 구현**
   - `schedules` CRUD 연동, 캘린더/오늘 요약을 실데이터로 교체

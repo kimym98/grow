@@ -1,0 +1,79 @@
+# robots.txt for https://www.jobkorea.co.kr/
+# Last updated: 2026-04-01
+# Policy: Restrict AI/LLM crawlers while allowing search engine indexing of public pages.
+# Author: WS SHIN
+
+# --- AI/LLM Crawlers (Limited Access: Homepage + Public Info/Content Section Only) ---
+User-agent: GPTBot
+User-agent: ChatGPT-User
+User-agent: OAI-SearchBot
+User-agent: ClaudeBot
+User-agent: Claude-Web
+User-agent: anthropic-ai
+User-agent: PerplexityBot
+User-agent: GoogleOther
+User-agent: Meta-ExternalAgent
+User-agent: GrokCrawler
+User-agent: YouBot
+User-agent: Cohere-ai
+User-agent: WRTNBot
+Disallow: /
+Allow: /$
+Allow: /recruit/joblist
+Allow: /Recruit/GI_Read
+Allow: /company
+Allow: /review
+Allow: /salary
+Allow: /help
+Allow: /goodjob/Tip
+Allow: /User/Qstn/AnswerWrite
+Allow: /starter
+Allow: /recruit/careers/articles
+Allow: /recruit/ai-jobs
+
+# --- Known Web Scrapers (Full Block) ---
+User-agent: CCBot
+User-agent: Diffbot
+User-agent: omgili
+User-agent: DeepSeek
+User-agent: DeepSeekBot
+Disallow: /
+
+User-agent: Amazonbot
+Disallow: /
+
+# --- Social Preview Crawlers ---
+User-agent: facebookexternalhit
+Disallow: /Search/
+Disallow: /Recruit/GI_Read/
+
+# --- General Rules (Search Engines & Normal Crawlers) ---
+User-agent: *
+Disallow: /login/
+Disallow: /user/
+Disallow: /my/
+Disallow: /account/
+Disallow: /RecrtMng/
+Disallow: /corp/
+Disallow: /text_co/
+Disallow: /Salary/mylist
+Disallow: /Recruit/JobList/SpaceClick
+Disallow: /Search?TS_Search=
+Disallow: /Search/?stext=
+Disallow: /recruit/ai-jobs/search
+Allow: /recruit/joblist
+Allow: /Recruit/GI_Read
+Allow: /company
+Allow: /review
+Allow: /salary
+Allow: /help
+Allow: /goodjob/Tip
+Allow: /User/Qstn/AnswerWrite
+Allow: /recruit/careers/articles
+Allow: /recruit/ai-jobs
+Allow: /
+
+# --- Sitemap ---
+Sitemap: https://www.jobkorea.co.kr/sitemap.xml
+
+#DaumWebMasterTool:5cf129e2439fc635cd64a5619b6bdd042e4697045ca88371f579e5adf34d6a7e:/8Kfv1zHkwyxlwEi28PeTg==

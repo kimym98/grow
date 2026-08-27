@@ -1,4 +1,3 @@
-export * from "./mocks/jobs"
 export * from "./mocks/news"
 export * from "./mocks/quiz"
 
@@ -29,3 +28,4 @@ export * from "./types/llm-provider"
 export * from "./types/notification-trigger"
 
 export * from "./lib/supabase-client"
+export * from "./lib/job-posting-mapper"

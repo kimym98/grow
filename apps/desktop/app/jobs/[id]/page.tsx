@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation"
-import { createJobPostingFixtures } from "@app/shared"
+import { rowToJobPosting, type JobPostingRow } from "@app/shared"
 
+import { supabase } from "@/lib/supabase"
 import { JobDetailContent } from "@/components/sections/jobs/job-detail-content"
 
 interface JobDetailPageProps {
@@ -9,12 +10,14 @@ interface JobDetailPageProps {
 
 export default async function JobDetailPage({ params }: JobDetailPageProps) {
   const { id } = await params
-  const jobs = createJobPostingFixtures(12)
-  const job = jobs.find((item) => item.id === id)
 
-  if (!job) {
+  const { data, error } = await supabase.from("job_postings").select("*").eq("id", id).maybeSingle()
+
+  if (error || !data) {
     notFound()
   }
+
+  const job = rowToJobPosting(data as JobPostingRow)
 
   return <JobDetailContent job={job} />
 }

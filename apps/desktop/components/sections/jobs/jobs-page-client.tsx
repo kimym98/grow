@@ -1,7 +1,7 @@
 "use client"
 
-import { useMemo, useState } from "react"
-import { createJobPostingFixtures, type JobPostingFixture } from "@app/shared"
+import { useEffect, useMemo, useState } from "react"
+import type { JobPosting } from "@app/shared"
 
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -9,15 +9,14 @@ import { EmptyState } from "@/components/common/empty-state"
 import { ListDetailPanel } from "@/components/common/list-detail-panel"
 import { JobFilters, type JobSortOption } from "@/components/sections/jobs/job-filters"
 import { JobDetailContent } from "@/components/sections/jobs/job-detail-content"
+import { fetchJobPostings } from "@/lib/job-postings"
 
 const PAGE_SIZE = 6
 
-function getJobIdSeed(job: JobPostingFixture) {
-  return Number(job.id.split("-").at(-1) ?? 0)
-}
-
 function JobsPageClient() {
-  const allJobs = useMemo(() => createJobPostingFixtures(12), [])
+  const [allJobs, setAllJobs] = useState<JobPosting[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+  const [loadError, setLoadError] = useState<string | null>(null)
 
   const [search, setSearch] = useState("")
   const [location, setLocation] = useState("all")
@@ -25,6 +24,25 @@ function JobsPageClient() {
   const [sort, setSort] = useState<JobSortOption>("deadline")
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE)
   const [selectedJobId, setSelectedJobId] = useState<string | null>(null)
+
+  useEffect(() => {
+    let cancelled = false
+
+    fetchJobPostings()
+      .then((jobs) => {
+        if (!cancelled) setAllJobs(jobs)
+      })
+      .catch((error: unknown) => {
+        if (!cancelled) setLoadError(error instanceof Error ? error.message : String(error))
+      })
+      .finally(() => {
+        if (!cancelled) setIsLoading(false)
+      })
+
+    return () => {
+      cancelled = true
+    }
+  }, [])
 
   const locationOptions = useMemo(
     () => Array.from(new Set(allJobs.map((job) => job.location))),
@@ -51,9 +69,13 @@ function JobsPageClient() {
 
     return filtered.sort((a, b) => {
       if (sort === "deadline") {
+        // 마감일이 없는(상시채용) 공고는 뒤로 보낸다
+        if (!a.deadline && !b.deadline) return 0
+        if (!a.deadline) return 1
+        if (!b.deadline) return -1
         return new Date(a.deadline).getTime() - new Date(b.deadline).getTime()
       }
-      return getJobIdSeed(b) - getJobIdSeed(a)
+      return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
     })
   }, [allJobs, search, location, careerLevel, sort])
 
@@ -91,7 +113,11 @@ function JobsPageClient() {
             careerLevelOptions={careerLevelOptions}
           />
 
-          {visibleJobs.length === 0 ? (
+          {isLoading ? (
+            <EmptyState title="채용 공고를 불러오는 중입니다" description="잠시만 기다려주세요" />
+          ) : loadError ? (
+            <EmptyState title="채용 공고를 불러오지 못했습니다" description={loadError} />
+          ) : visibleJobs.length === 0 ? (
             <EmptyState title="조건에 맞는 공고가 없습니다" description="검색어나 필터를 변경해보세요" />
           ) : (
             <ul className="flex flex-col gap-2 p-3">
@@ -109,8 +135,9 @@ function JobsPageClient() {
                       {job.company} · {job.location}
                     </p>
                     <div className="flex flex-wrap gap-1">
+                      <Badge variant="outline">{job.source}</Badge>
                       <Badge variant="outline">{job.careerLevel}</Badge>
-                      <Badge variant="secondary">{job.deadline} 마감</Badge>
+                      <Badge variant="secondary">{job.deadline ? `${job.deadline} 마감` : "상시채용"}</Badge>
                     </div>
                   </button>
                 </li>
