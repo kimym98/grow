@@ -18,8 +18,15 @@ export function AuthGuard({ children }: AuthGuardProps) {
   const isPublicRoute = PUBLIC_ROUTES.includes(pathname)
 
   useEffect(() => {
-    if (!isLoading && !session && !isPublicRoute) {
+    if (isLoading) return
+
+    if (!session && !isPublicRoute) {
       router.replace("/login")
+      return
+    }
+
+    if (session && isPublicRoute) {
+      router.replace("/")
     }
   }, [isLoading, session, isPublicRoute, router])
 
