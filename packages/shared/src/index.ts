@@ -1,4 +1,3 @@
-export * from "./mocks/news"
 export * from "./mocks/quiz"
 
 // mocks/schedules, mocks/documents는 공식 타입(./types)과 이름이 겹치는
@@ -30,4 +29,5 @@ export * from "./types/notification-trigger"
 export * from "./lib/supabase-client"
 export * from "./lib/job-posting-mapper"
 export * from "./lib/schedule-mapper"
+export * from "./lib/tech-news-mapper"
 export * from "./lib/notification-trigger"

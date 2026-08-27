@@ -153,11 +153,14 @@ AI 취업 비서는 IT 직군 취업 준비생을 위한 노션형 올인원 데
   - ✅ 검증: Playwright MCP로 테스트 계정 로그인 → 일정 생성/삭제 → 공고 상세 "일정에 추가" E2E 테스트, Supabase SQL로 실제 반영 확인. 실제 OS 알림 발송은 Electron `BrowserWindow`를 Playwright로 제어할 수 없어 자동화 불가 — 사용자의 Electron 앱 수동 검증 필요
   - See: /tasks/011-schedule-crud-notifications.md
 
-- **Task 012: IT 뉴스 수집 Edge Function 및 피드 연동**
-  - 공고 수집과 동일 패턴 재사용한 RSS 수집 Edge Function + `pg_cron` 스케줄
-  - `tech_news` upsert 중복 방지, 요약/출처/발행일 정규화
-  - 뉴스 피드·북마크를 실데이터로 교체(북마크 테이블/컬럼 포함)
-  - Playwright MCP로 피드 로딩·북마크 토글·필터 E2E 테스트
+- ✅ **Task 012: IT 뉴스 수집 Edge Function 및 피드 연동**
+  - ✅ 소스 조사: 네이버 뉴스 검색 API는 키워드 검색 기반+얕은 요약이라 배제, GeekNews(news.hada.io) Atom RSS와 전자신문(etnews) RSS(AI `04046.xml`, 보안 `04045.xml`)를 채택. 최초 웹 검색으로 얻은 전자신문 섹션 코드(`Section041/045.xml`)가 실제로는 WAF 차단되는 구식 경로임을 curl 실측으로 발견해 정정
+  - ✅ 공고 수집(Task 010)과 동일 패턴 재사용한 `collect-tech-news` Edge Function 구현(`types.ts`/`sources/*.ts`/`index.ts`, 정규식 기반 파싱) + `pg_cron` 1일 2회(KST 09:00/18:00) 스케줄 등록(Task 010과 동일 Vault 서비스 키 재사용)
+  - ✅ `tech_news.url` 고유키 upsert 중복 방지, 요약/출처/발행일 정규화. 전자신문 AI/보안 두 섹션에 동일 기사가 겹쳐 같은 upsert 배치 내 url 중복으로 실패하는 문제를 발견해 소스 어댑터에서 url 기준 dedupe 처리로 해결
+  - ✅ `news_collection_logs` 테이블 신규 마이그레이션(`job_collection_logs`와 동일 구조), `tech_news`/`tech_news_bookmarks`는 Task 009에서 이미 마이그레이션되어 있었음을 확인 후 재사용
+  - ✅ 뉴스 피드·북마크를 실데이터로 교체: `packages/shared`에 `rowToTechNews` 매퍼 추가, `apps/desktop/lib/tech-news.ts`(조회/북마크 생성·삭제) 구현, 더 이상 쓰이지 않는 뉴스 mock 삭제
+  - ✅ 검증: `supabase functions serve` 로컬 테스트(파싱 로직은 raw 피드로 Node 독립 검증 후 실제 upsert까지 확인) → 배포 → pg_cron 등록. Playwright MCP로 로그아웃 → 테스트 계정 로그인 → 뉴스 피드 로딩(139건) → 북마크 토글 E2E 테스트, Supabase SQL로 북마크 생성/삭제 및 새로고침 후 상태 유지 실제 반영 확인
+  - See: /docs/news-source-research.md
 
 - **Task 013: PDF 첨삭 파이프라인 및 LLM Provider 구현**
   - Supabase Storage 업로드(용량/확장자 검증) 및 서명 URL 처리

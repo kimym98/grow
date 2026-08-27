@@ -1,8 +1,8 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { isToday, parseISO } from "date-fns";
-import { createTechNewsFixtures } from "@app/shared";
+import type { TechNews } from "@app/shared";
 
 import {
   Carousel,
@@ -12,6 +12,7 @@ import {
   CarouselPrevious,
 } from "@/components/ui/carousel";
 import { NewsCard } from "@/components/sections/news/news-card";
+import { bookmarkTechNews, fetchTechNews, unbookmarkTechNews } from "@/lib/tech-news";
 
 /** 오늘 뉴스가 없을 때 폴백으로 보여줄 최근 뉴스 개수 */
 const FALLBACK_COUNT = 6;
@@ -39,7 +40,23 @@ const CARD_BACKGROUND_COLORS = [
  * 당일(isToday) 뉴스만 필터링해 노출하고, 0건이면 최근순 상위 N개로 폴백한다.
  */
 function TodayNewsCarousel() {
-  const [newsList, setNewsList] = useState(() => createTechNewsFixtures(12));
+  const [newsList, setNewsList] = useState<TechNews[]>([]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    fetchTechNews()
+      .then((news) => {
+        if (!cancelled) setNewsList(news);
+      })
+      .catch(() => {
+        // 대시보드 위젯이라 실패 시 조용히 빈 목록으로 둔다(아래 items.length === 0 분기가 처리)
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const { items, isFallback } = useMemo(() => {
     const todayNews = newsList.filter((news) =>
@@ -73,12 +90,24 @@ function TodayNewsCarousel() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [items.map((news) => news.id).join(",")]);
 
-  function toggleBookmark(id: string) {
-    setNewsList((prev) =>
-      prev.map((news) =>
-        news.id === id ? { ...news, isBookmarked: !news.isBookmarked } : news,
-      ),
-    );
+  async function toggleBookmark(id: string) {
+    const target = newsList.find((news) => news.id === id);
+    if (!target) return;
+
+    try {
+      if (target.isBookmarked) {
+        await unbookmarkTechNews(id);
+      } else {
+        await bookmarkTechNews(id);
+      }
+      setNewsList((prev) =>
+        prev.map((news) =>
+          news.id === id ? { ...news, isBookmarked: !news.isBookmarked } : news,
+        ),
+      );
+    } catch (error) {
+      console.error("북마크 처리 실패:", error instanceof Error ? error.message : error);
+    }
   }
 
   if (items.length === 0) {

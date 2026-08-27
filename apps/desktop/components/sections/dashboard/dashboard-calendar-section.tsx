@@ -1,23 +1,30 @@
 "use client"
 
 import { useCallback, useEffect, useState } from "react"
-import { Plus } from "lucide-react"
+import { Bell, Plus } from "lucide-react"
 import type { Schedule, ScheduleChecklistItem } from "@app/shared"
 
 import type { ScheduleFormValues } from "@/lib/validators"
 import { Button } from "@/components/ui/button"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { EmptyState } from "@/components/common/empty-state"
 import { createSchedule, deleteSchedule, fetchSchedules, updateSchedule } from "@/lib/schedules"
 import { getSchedulesOnDate } from "@/components/sections/calendar/schedule-utils"
 import { MonthlyCalendarGrid } from "@/components/sections/dashboard/monthly-calendar-grid"
 import { ScheduleSheet } from "@/components/sections/dashboard/schedule-sheet"
+import { NotificationSettings } from "@/components/sections/calendar/notification-settings"
 
 /**
  * 대시보드 홈에 통합된 캘린더 섹션
  * - 월간 그리드 + 날짜 클릭 시 우측 시트(목록/작성)로 일정 관리
  * - Supabase schedules 테이블과 직접 연동(로컬 mock 제거)
  */
-function DashboardCalendarSection() {
+interface DashboardCalendarSectionProps {
+  /** 상단 "일정" 제목에 부여할 id (섹션 aria-labelledby와 연결) */
+  headingId?: string
+}
+
+function DashboardCalendarSection({ headingId }: DashboardCalendarSectionProps) {
   const [schedules, setSchedules] = useState<Schedule[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [loadError, setLoadError] = useState<string | null>(null)
@@ -95,11 +102,29 @@ function DashboardCalendarSection() {
 
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-3">
-      <div className="flex shrink-0 items-center justify-end">
-        <Button size="sm" onClick={openCreateSheet}>
-          <Plus />
-          일정 추가
-        </Button>
+      <div className="flex shrink-0 items-center justify-between gap-2">
+        <h2 id={headingId} className="text-lg font-semibold">
+          일정
+        </h2>
+        <div className="flex items-center gap-2">
+          <Button size="sm" onClick={openCreateSheet}>
+            <Plus />
+            일정 추가
+          </Button>
+          <Button size="sm" variant="outline" onClick={() => setCurrentMonth(new Date())}>
+            오늘
+          </Button>
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button size="icon" variant="outline" aria-label="알림 설정">
+                <Bell />
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent align="end" className="w-auto p-0">
+              <NotificationSettings />
+            </PopoverContent>
+          </Popover>
+        </div>
       </div>
 
       {isLoading ? (

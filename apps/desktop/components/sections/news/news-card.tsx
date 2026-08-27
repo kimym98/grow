@@ -3,8 +3,9 @@
 import { useEffect, useState } from "react";
 import { useTheme } from "next-themes";
 import { Bookmark, BookmarkCheck } from "lucide-react";
-import type { TechNewsFixture } from "@app/shared";
+import type { TechNews } from "@app/shared";
 
+import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -18,7 +19,7 @@ import {
 
 interface NewsCardProps {
   /** 뉴스 아이템 데이터 */
-  news: TechNewsFixture;
+  news: TechNews;
   /** 북마크 토글 콜백 (뉴스 id 전달) */
   onToggleBookmark?: (id: string) => void;
   /** 카드 루트에 추가할 클래스 */
@@ -49,7 +50,7 @@ function NewsCard({
 
   return (
     <Card
-      className={className}
+      className={cn("flex h-full flex-col", className)}
       style={
         appliedBackgroundColor
           ? { backgroundColor: appliedBackgroundColor }
@@ -68,15 +69,17 @@ function NewsCard({
             href={news.url}
             target="_blank"
             rel="noopener noreferrer"
-            className="hover:underline"
+            className="line-clamp-2 hover:underline"
           >
             {news.title}
           </a>
         </CardTitle>
       </CardHeader>
 
-      <CardContent>
-        <CardDescription>{news.summary}</CardDescription>
+      <CardContent className="flex-1">
+        <CardDescription className="line-clamp-2">
+          {news.summary}
+        </CardDescription>
       </CardContent>
 
       <CardFooter className="justify-between">

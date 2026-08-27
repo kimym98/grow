@@ -62,42 +62,31 @@ function MonthlyCalendarGrid({
 
   return (
     <div className={cn("flex h-full min-h-0 flex-col gap-2", className)}>
-      {/* 년/월 헤더 + 이전/다음 달 이동 (캐러셀과 동일하게 버튼 간 여백을 확보해 서로 겹치지 않도록 함) */}
-      <div className="flex shrink-0 items-center justify-between">
-        <h3 className="text-base font-semibold sm:text-lg">
+      {/* 년/월 헤더: 중앙 정렬 + 좌우에 이전/다음 달 이동 화살표 배치 */}
+      <div className="flex shrink-0 items-center justify-center gap-2">
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          className="size-7 sm:size-8"
+          aria-label="이전 달"
+          onClick={() => onMonthChange?.(subMonths(monthStart, 1))}
+        >
+          <ChevronLeft />
+        </Button>
+        <h3 className="min-w-24 text-center text-base font-semibold sm:min-w-28 sm:text-lg">
           {format(monthStart, "yyyy년 M월", { locale: ko })}
         </h3>
-        <div className="flex items-center gap-2">
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon"
-            className="size-7 sm:size-8"
-            aria-label="이전 달"
-            onClick={() => onMonthChange?.(subMonths(monthStart, 1))}
-          >
-            <ChevronLeft />
-          </Button>
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            className="h-7 px-2 text-xs sm:h-8 sm:text-sm"
-            onClick={() => onMonthChange?.(new Date())}
-          >
-            오늘
-          </Button>
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon"
-            className="size-7 sm:size-8"
-            aria-label="다음 달"
-            onClick={() => onMonthChange?.(addMonths(monthStart, 1))}
-          >
-            <ChevronRight />
-          </Button>
-        </div>
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          className="size-7 sm:size-8"
+          aria-label="다음 달"
+          onClick={() => onMonthChange?.(addMonths(monthStart, 1))}
+        >
+          <ChevronRight />
+        </Button>
       </div>
 
       {/* 요일 헤더 */}
