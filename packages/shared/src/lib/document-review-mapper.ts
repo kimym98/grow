@@ -1,0 +1,42 @@
+import type { DocumentReview, DocumentReviewComment, DocumentReviewVersion } from "../types/document-review"
+
+/**
+ * Supabase document_reviews 테이블의 DB row 형태 (snake_case)
+ * 컬럼 정의는 docs/database-schema.md 참고
+ */
+export interface DocumentReviewRow {
+  id: string
+  user_id: string
+  title: string
+  type: string
+  status: string
+  version: number
+  resume_question: string | null
+  original_text: string
+  reviewed_text: string | null
+  versions: DocumentReviewVersion[]
+  comments: DocumentReviewComment[]
+  created_at: string
+  updated_at: string
+}
+
+/**
+ * DB row(snake_case)를 도메인 타입(camelCase)으로 변환한다.
+ */
+export function rowToDocumentReview(row: DocumentReviewRow): DocumentReview {
+  return {
+    id: row.id,
+    userId: row.user_id,
+    title: row.title,
+    type: row.type as DocumentReview["type"],
+    status: row.status as DocumentReview["status"],
+    version: row.version,
+    resumeQuestion: row.resume_question ?? undefined,
+    originalText: row.original_text,
+    reviewedText: row.reviewed_text ?? undefined,
+    versions: row.versions ?? [],
+    comments: row.comments ?? [],
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+  }
+}

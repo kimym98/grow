@@ -5,10 +5,13 @@ import { zodResolver } from "@hookform/resolvers/zod"
 import { useForm } from "react-hook-form"
 import { UploadCloud } from "lucide-react"
 
+import { documentFileSchema } from "@/lib/document-upload"
+import type { LlmProviderName } from "@/lib/llm-keys"
 import { documentUploadFormSchema, type DocumentUploadFormValues } from "@/lib/validators"
 import { Button } from "@/components/ui/button"
 import {
   DialogContent,
+  DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
@@ -31,35 +34,55 @@ import {
 } from "@/components/ui/select"
 import { cn } from "@/lib/utils"
 
-const DEFAULT_VALUES: DocumentUploadFormValues = {
-  fileName: "",
-  type: "resume",
-  resumeQuestion: "",
+const PROVIDER_LABELS: Record<LlmProviderName, string> = {
+  gemini: "Gemini",
+  anthropic: "Anthropic (Claude)",
 }
 
 interface DocumentUploadDropzoneProps {
-  onSubmit: (values: DocumentUploadFormValues) => void
+  availableProviders: LlmProviderName[]
+  onSubmit: (file: File, values: DocumentUploadFormValues) => void
   onOpenChange: (open: boolean) => void
 }
 
-function DocumentUploadDropzone({ onSubmit, onOpenChange }: DocumentUploadDropzoneProps) {
+function DocumentUploadDropzone({ availableProviders, onSubmit, onOpenChange }: DocumentUploadDropzoneProps) {
   const [isDragOver, setIsDragOver] = useState(false)
+  const [file, setFile] = useState<File | null>(null)
+  const [fileError, setFileError] = useState<string | null>(null)
 
   const form = useForm<DocumentUploadFormValues>({
     resolver: zodResolver(documentUploadFormSchema),
-    defaultValues: DEFAULT_VALUES,
+    defaultValues: {
+      fileName: "",
+      type: "resume",
+      resumeQuestion: "",
+      provider: availableProviders[0],
+    },
   })
 
   const type = form.watch("type")
 
-  function handleFile(file?: File) {
-    if (file) {
-      form.setValue("fileName", file.name, { shouldValidate: true })
+  function handleFile(selected?: File) {
+    if (!selected) return
+
+    const result = documentFileSchema.safeParse(selected)
+    if (!result.success) {
+      setFileError(result.error.issues[0]?.message ?? "올바르지 않은 파일입니다")
+      return
     }
+
+    setFileError(null)
+    setFile(selected)
+    form.setValue("fileName", selected.name, { shouldValidate: true })
   }
 
   function handleSubmit(values: DocumentUploadFormValues) {
-    onSubmit(values)
+    if (!file) {
+      setFileError("파일을 선택해주세요")
+      return
+    }
+
+    onSubmit(file, values)
     onOpenChange(false)
   }
 
@@ -67,6 +90,7 @@ function DocumentUploadDropzone({ onSubmit, onOpenChange }: DocumentUploadDropzo
     <DialogContent className="sm:max-w-md">
       <DialogHeader>
         <DialogTitle>문서 업로드</DialogTitle>
+        <DialogDescription>PDF 파일을 업로드하면 등록한 AI 키로 첨삭을 시작합니다</DialogDescription>
       </DialogHeader>
 
       <Form {...form}>
@@ -106,6 +130,32 @@ function DocumentUploadDropzone({ onSubmit, onOpenChange }: DocumentUploadDropzo
                     />
                   </label>
                 </FormControl>
+                {fileError ? <p className="text-sm text-destructive">{fileError}</p> : null}
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={form.control}
+            name="provider"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>첨삭에 사용할 AI</FormLabel>
+                <Select value={field.value} onValueChange={field.onChange}>
+                  <FormControl>
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder="AI 선택" />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    {availableProviders.map((provider) => (
+                      <SelectItem key={provider} value={provider}>
+                        {PROVIDER_LABELS[provider]}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
                 <FormMessage />
               </FormItem>
             )}

@@ -124,6 +124,13 @@ file_size_limit = "50MiB"
 # allowed_mime_types = ["image/png", "image/jpeg"]
 # objects_path = "./images"
 
+# PDF 첨삭 파이프라인(Task 013)용 비공개 버킷
+# 오브젝트 경로는 {user_id}/{document_review_id}.pdf 규칙을 따른다(storage RLS가 폴더명으로 소유자를 판별)
+[storage.buckets.documents]
+public = false
+file_size_limit = "10MiB"
+allowed_mime_types = ["application/pdf"]
+
 # Allow connections via S3 compatible clients
 [storage.s3_protocol]
 enabled = true

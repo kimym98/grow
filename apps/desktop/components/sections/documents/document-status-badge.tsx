@@ -1,8 +1,8 @@
-import type { DocumentReviewFixture } from "@app/shared"
+import type { DocumentReview } from "@app/shared"
 
 import { Badge } from "@/components/ui/badge"
 
-const STATUS_LABELS: Record<DocumentReviewFixture["status"], string> = {
+const STATUS_LABELS: Record<DocumentReview["status"], string> = {
   pending: "대기중",
   processing: "처리중",
   completed: "완료",
@@ -10,7 +10,7 @@ const STATUS_LABELS: Record<DocumentReviewFixture["status"], string> = {
 }
 
 const STATUS_VARIANTS: Record<
-  DocumentReviewFixture["status"],
+  DocumentReview["status"],
   "outline" | "secondary" | "default" | "destructive"
 > = {
   pending: "outline",
@@ -20,7 +20,7 @@ const STATUS_VARIANTS: Record<
 }
 
 interface DocumentStatusBadgeProps {
-  status: DocumentReviewFixture["status"]
+  status: DocumentReview["status"]
 }
 
 function DocumentStatusBadge({ status }: DocumentStatusBadgeProps) {

@@ -1,54 +1,120 @@
 "use client"
 
-import { useMemo, useState } from "react"
-import { Plus } from "lucide-react"
-import { createDocumentReviewFixtures, type DocumentReviewFixture } from "@app/shared"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
+import Link from "next/link"
+import { Plus, TriangleAlert } from "lucide-react"
+import { toast } from "sonner"
+import type { DocumentReview } from "@app/shared"
 
 import type { DocumentUploadFormValues } from "@/lib/validators"
+import { uploadDocument } from "@/lib/document-upload"
+import { fetchDocumentReviews, triggerDocumentReview } from "@/lib/document-reviews"
+import { fetchLlmKeyStatuses, type LlmProviderName } from "@/lib/llm-keys"
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
 import { Dialog } from "@/components/ui/dialog"
 import { EmptyState } from "@/components/common/empty-state"
+import { LoadingState } from "@/components/common/loading-state"
 import { ListDetailPanel } from "@/components/common/list-detail-panel"
 import { DocumentDetailContent } from "@/components/sections/documents/document-detail-content"
 import { DocumentStatusBadge } from "@/components/sections/documents/document-status-badge"
 import { DocumentUploadDropzone } from "@/components/sections/documents/document-upload-dropzone"
+
+const POLL_INTERVAL_MS = 4000
 
 interface DocumentsPageClientProps {
   initialSelectedId?: string
 }
 
 function DocumentsPageClient({ initialSelectedId }: DocumentsPageClientProps) {
-  const [documents, setDocuments] = useState<DocumentReviewFixture[]>(() =>
-    createDocumentReviewFixtures(6)
-  )
+  const [documents, setDocuments] = useState<DocumentReview[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+  const [availableProviders, setAvailableProviders] = useState<LlmProviderName[]>([])
   const [selectedDocumentId, setSelectedDocumentId] = useState<string | null>(
     initialSelectedId ?? null
   )
   const [isUploadOpen, setIsUploadOpen] = useState(false)
+  const pollTimerRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
   const selectedDocument = useMemo(
     () => documents.find((document) => document.id === selectedDocumentId) ?? null,
     [documents, selectedDocumentId]
   )
 
-  function handleUpload(values: DocumentUploadFormValues) {
-    const seed = documents.length + 1
+  const loadDocuments = useCallback(async () => {
+    try {
+      setDocuments(await fetchDocumentReviews())
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "문서 목록을 불러오지 못했습니다")
+    }
+  }, [])
 
-    const newDocument: DocumentReviewFixture = {
-      id: `document-upload-${seed}`,
-      title: values.fileName,
-      type: values.type,
-      status: "pending",
-      version: 1,
-      updatedAt: new Date().toISOString().slice(0, 10),
-      resumeQuestion: values.type === "resume" ? values.resumeQuestion : undefined,
-      versions: [{ version: 1, createdAt: new Date().toISOString().slice(0, 10), summary: "업로드된 원본" }],
-      diffSegments: [{ type: "unchanged", text: "첨삭 대기 중입니다." }],
-      comments: [],
+  useEffect(() => {
+    async function init() {
+      setIsLoading(true)
+      try {
+        const [statuses] = await Promise.all([fetchLlmKeyStatuses(), loadDocuments()])
+        setAvailableProviders(statuses.map((status) => status.provider))
+      } catch (error) {
+        toast.error(error instanceof Error ? error.message : "설정을 불러오지 못했습니다")
+      } finally {
+        setIsLoading(false)
+      }
     }
 
-    setDocuments((prev) => [newDocument, ...prev])
-    setSelectedDocumentId(newDocument.id)
+    init()
+  }, [loadDocuments])
+
+  // 첨삭이 진행 중인 문서가 있으면 완료될 때까지 주기적으로 목록을 다시 불러온다
+  useEffect(() => {
+    const hasInFlight = documents.some(
+      (document) => document.status === "pending" || document.status === "processing"
+    )
+
+    if (hasInFlight && !pollTimerRef.current) {
+      pollTimerRef.current = setInterval(loadDocuments, POLL_INTERVAL_MS)
+    } else if (!hasInFlight && pollTimerRef.current) {
+      clearInterval(pollTimerRef.current)
+      pollTimerRef.current = null
+    }
+
+    return () => {
+      if (pollTimerRef.current) {
+        clearInterval(pollTimerRef.current)
+        pollTimerRef.current = null
+      }
+    }
+  }, [documents, loadDocuments])
+
+  async function handleUpload(file: File, values: DocumentUploadFormValues) {
+    try {
+      const { documentReviewId } = await uploadDocument({
+        file,
+        title: values.fileName,
+        type: values.type,
+        resumeQuestion: values.type === "resume" ? values.resumeQuestion : undefined,
+      })
+
+      setSelectedDocumentId(documentReviewId)
+      await loadDocuments()
+
+      triggerDocumentReview(documentReviewId, values.provider).catch((error) => {
+        toast.error(error instanceof Error ? error.message : "첨삭 요청에 실패했습니다")
+        loadDocuments()
+      })
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "문서 업로드에 실패했습니다")
+    }
+  }
+
+  const hasRegisteredKey = availableProviders.length > 0
+
+  function handleUploadClick() {
+    if (!hasRegisteredKey) {
+      toast.error("먼저 설정에서 LLM API 키를 등록해주세요")
+      return
+    }
+    setIsUploadOpen(true)
   }
 
   return (
@@ -61,13 +127,26 @@ function DocumentsPageClient({ initialSelectedId }: DocumentsPageClientProps) {
           <div className="flex h-full flex-col">
             <div className="flex items-center justify-between border-b border-border/40 p-3">
               <h1 className="text-sm font-medium">문서 첨삭</h1>
-              <Button size="sm" onClick={() => setIsUploadOpen(true)}>
+              <Button size="sm" onClick={handleUploadClick}>
                 <Plus />
                 업로드
               </Button>
             </div>
 
-            {documents.length === 0 ? (
+            {!hasRegisteredKey && !isLoading ? (
+              <Alert className="m-3 w-auto" variant="destructive">
+                <TriangleAlert />
+                <AlertTitle>등록된 AI API 키가 없습니다</AlertTitle>
+                <AlertDescription>
+                  문서 첨삭을 사용하려면 먼저{" "}
+                  <Link href="/settings">설정에서 Gemini 또는 Anthropic API 키를 등록</Link>해주세요.
+                </AlertDescription>
+              </Alert>
+            ) : null}
+
+            {isLoading ? (
+              <LoadingState variant="list" count={4} />
+            ) : documents.length === 0 ? (
               <EmptyState title="업로드한 문서가 없습니다" description="첨삭받을 문서를 업로드해보세요" />
             ) : (
               <ul className="flex flex-col gap-2 p-3">
@@ -82,8 +161,7 @@ function DocumentsPageClient({ initialSelectedId }: DocumentsPageClientProps) {
                     >
                       <p className="text-sm font-medium">{document.title}</p>
                       <p className="text-xs text-muted-foreground">
-                        {document.type === "resume" ? "자소서" : "포트폴리오"} · v{document.version} ·{" "}
-                        {document.updatedAt}
+                        {document.type === "resume" ? "자소서" : "포트폴리오"} · v{document.version}
                       </p>
                       <DocumentStatusBadge status={document.status} />
                     </button>
@@ -104,7 +182,11 @@ function DocumentsPageClient({ initialSelectedId }: DocumentsPageClientProps) {
 
       <Dialog open={isUploadOpen} onOpenChange={setIsUploadOpen}>
         {isUploadOpen ? (
-          <DocumentUploadDropzone onSubmit={handleUpload} onOpenChange={setIsUploadOpen} />
+          <DocumentUploadDropzone
+            availableProviders={availableProviders}
+            onSubmit={handleUpload}
+            onOpenChange={setIsUploadOpen}
+          />
         ) : null}
       </Dialog>
     </>
