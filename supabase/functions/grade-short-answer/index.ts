@@ -3,7 +3,9 @@ import "@supabase/functions-js/edge-runtime.d.ts"
 import { withSupabase } from "@supabase/server"
 
 import { AuthRequiredError, jsonError, requireUserId } from "../_shared/auth.ts"
-import { gradeShortAnswer, type LlmProviderName } from "./llm.ts"
+import { getCachedLlmResponse, setCachedLlmResponse, sha256Hex } from "../_shared/llm-cache.ts"
+import { logEdgeFunctionError } from "../_shared/error-log.ts"
+import { gradeShortAnswer, type LlmProviderName, type ShortAnswerGradeResult } from "./llm.ts"
 
 interface GradeRequestBody {
   questionId: string
@@ -14,11 +16,15 @@ interface GradeRequestBody {
 
 const SUPPORTED_PROVIDERS: LlmProviderName[] = ["gemini", "anthropic"]
 const PASS_SCORE_THRESHOLD = 70
+const FUNCTION_NAME = "grade-short-answer"
+// 프롬프트(llm.ts의 buildGradingPrompt)를 바꾸면 캐시가 예전 결과를 재사용하지 않도록 버전을 올린다
+const PROMPT_VERSION = 1
 
 export default {
   fetch: withSupabase({ auth: ["user"] }, async (req, ctx) => {
+    let userId: string
     try {
-      requireUserId(ctx.userClaims)
+      userId = requireUserId(ctx.userClaims)
     } catch (error) {
       if (error instanceof AuthRequiredError) return jsonError("UNAUTHENTICATED", error.message, 401)
       throw error
@@ -68,11 +74,24 @@ export default {
     }
 
     try {
-      const { score, feedback } = await gradeShortAnswer(body.provider, apiKey, {
-        question: question.question,
-        modelAnswer: question.answer,
-        userAnswer: body.answerText,
-      })
+      // 캐시 키: 프롬프트 버전 + provider + 문제 + 답변 텍스트. 같은 문제에 같은 답을 다시 제출하면(재제출) 캐시를 재사용한다
+      const cacheKey = await sha256Hex(
+        `v${PROMPT_VERSION}|${body.provider}|${body.questionId}|${body.answerText}`
+      )
+
+      const cached = await getCachedLlmResponse<ShortAnswerGradeResult>(ctx.supabase, FUNCTION_NAME, cacheKey)
+
+      const { score, feedback } =
+        cached ??
+        (await gradeShortAnswer(body.provider, apiKey, {
+          question: question.question,
+          modelAnswer: question.answer,
+          userAnswer: body.answerText,
+        }))
+
+      if (!cached) {
+        await setCachedLlmResponse(ctx.supabase, userId, FUNCTION_NAME, cacheKey, { score, feedback })
+      }
 
       const isCorrect = score >= PASS_SCORE_THRESHOLD
 
@@ -94,6 +113,13 @@ export default {
       return Response.json({ score, feedback, isCorrect })
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error)
+
+      await logEdgeFunctionError(ctx.supabaseAdmin, "grade-short-answer", message, {
+        questionId: body.questionId,
+        quizSessionId: body.quizSessionId,
+        provider: body.provider,
+      })
+
       return jsonError("GRADING_FAILED", message, 500)
     }
   }),
