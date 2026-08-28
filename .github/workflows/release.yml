@@ -12,6 +12,8 @@ on:
 jobs:
   release:
     runs-on: windows-latest
+    permissions:
+      contents: write
     steps:
       - name: 저장소 체크아웃
         uses: actions/checkout@v4
