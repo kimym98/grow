@@ -206,13 +206,18 @@ AI 취업 비서는 IT 직군 취업 준비생을 위한 노션형 올인원 데
   - 단위/E2E 테스트 코드 정비, CI 파이프라인(lint/build/test) 및 Electron 패키징·배포(코드 서명 포함)
   - 로깅/에러 추적(Sentry 등), Edge Function 실행 모니터링 및 알림
 
-- **Task 017: Electron 프로덕션 빌드 정적 export 정합성 확보**
-  - Task 016 릴리스 CI 작업 중 발견: `electron/main.ts`가 프로덕션에서 `file://.../out/index.html`을 로드하는데, `next.config.ts`에 `output: "export"`가 없어 `next build`가 `out/`을 아예 생성하지 않아 패키징된 앱이 빈 화면으로 뜨는 상태
-  - `output: "export"`를 켜면 `/jobs/[id]`, `/documents/[id]`, `/quiz/[sessionId]`가 서버 컴포넌트(요청 시점 Supabase 조회 포함)라 `generateStaticParams()` 누락으로 빌드 자체가 실패함을 실측 확인 — 세 라우트를 클라이언트 컴포넌트로 전환(데이터 조회를 클라이언트로 이동)해야 함
-  - 전환 후 실제 `out/` 산출물 생성 및 Electron이 `file://` 프로토콜로 정상 로드하는지 재검증
-  - Task 016-5(릴리스 CI 워크플로)에서 미완료로 남긴 "로컬 `electron-builder` 패키징 성공" 검증을 여기서 마무리 (이 환경은 Windows 개발자 모드 미설정으로 `winCodeSign` 심볼릭 링크 추출이 막혀 있어, 검증 전 `CSC_IDENTITY_AUTO_DISCOVERY=false` 설정 또는 개발자 모드 활성화가 선행되어야 함)
+- ✅ **Task 017: Electron 프로덕션 빌드 정적 export 정합성 확보**
+  - ✅ `apps/desktop/next.config.ts`에 `output: "export"` 추가. `next/image` 미사용을 확인해 `images.unoptimized` 등 추가 옵션은 불필요했음
+  - ✅ `/jobs/[id]`, `/documents/[id]`, `/quiz/[sessionId]`의 Supabase 데이터 조회를 client 컴포넌트로 이동. `documents`/`quiz`는 이미 얇은 wrapper라 시그니처만 정리했고, `jobs`는 신규 `job-detail-page-client.tsx`(useEffect 조회, 기존 `LoadingState`/`EmptyState`/`JobDetailContent` 재사용)를 만들어 위임함. page.tsx 자체는 async 서버 컴포넌트(`await params`)로 유지 — 실측 결과 `"use client"`와 `generateStaticParams()`를 한 페이지에 함께 export할 수 없어(Next 16 App Router 제약), 데이터 조회만 client로 옮기고 페이지 진입점은 서버 컴포넌트로 남겨야 함을 발견
+  - ✅ `output: "export"`는 `generateStaticParams()`가 빈 배열을 반환하면 "missing" 설정으로 간주해 빌드를 거부함을 실측 확인. 이 앱이 `file://out/index.html`만 1회 로드하고 이후 전부 client-side 라우팅만 쓰는 순수 SPA(새로고침/딥링크 직접 진입 미지원)임을 코드 전수 조사로 확인했으므로, 세 라우트 모두 무해한 `placeholder` 값을 반환하도록 처리해 해결
+  - ✅ `npm run build` 실제 실행으로 `out/index.html`, `out/jobs/placeholder`, `out/documents/placeholder`, `out/quiz/placeholder` 등 산출물이 정상 생성됨을 확인
+  - ✅ `electron-builder` 로컬 Windows 패키징 성공. 최초 시도 시 `CSC_IDENTITY_AUTO_DISCOVERY=false`로 코드서명을 꺼도 electron-builder가 Windows 타겟 빌드에서도 내부적으로 `winCodeSign` 바이너리 패키지를 항상 내려받아 압축 해제를 시도했고, Windows 개발자 모드 레지스트리 값(`AllowDevelopmentWithoutDevLicense`)은 켜져 있었으나 재로그인 전이라 현재 세션 토큰에 반영되지 않아 macOS용 `.dylib` 심볼릭 링크 생성이 `EPERM`으로 실패 → 무한 재다운로드·재시도에 빠지는 것을 실측 확인. 사용자가 개발자 모드를 다시 켜고(재로그인 반영) 재시도하자 winCodeSign 추출이 정상 동작함을 확인
+  - ✅ 패키징 재시도 중 별도의 실제 버그 1건 추가 발견 및 수정: `apps/desktop`이 모노레포 하위 폴더라 `.git`이 없어 electron-builder가 repository를 자동 감지하지 못했고, `build.publish.provider: "github"` 설정과 결합되어 업데이트 메타데이터(`latest.yml`) 생성 단계에서 `Cannot read properties of null (reading 'provider')`로 크래시 — `apps/desktop/package.json`에 `repository`(`github.com/kimym98/grow`, `directory: apps/desktop`) 필드를 명시해 해결
+  - ✅ 최종 검증: `dist/AI 취업 비서 Setup 0.1.0.exe`, `.blockmap`, `latest.yml`이 모두 정상 생성되고 electron-builder가 exit code 0으로 종료됨을 확인. 코드서명은 로컬 검증을 위해 껐을 뿐이며(`verifyUpdateCodeSignature: false`), 실제 배포 시에는 정식 코드 서명이 필요함
+  - ✅ 설치 파일을 실제로 설치·실행해보니 main process에서 `Cannot find module '@sentry/browser-utils'`로 크래시하는 런타임 버그를 추가 발견. 원인은 `@sentry/electron` → `@sentry/browser`의 전이 의존성인 `@sentry/browser-utils`가 npm workspaces 모노레포에서 루트 `node_modules`에만 존재해, electron-builder가 `apps/desktop` 기준으로 프로덕션 의존성을 계산할 때 이를 놓치고 asar 패키지에서 빠뜨린 것 — `apps/desktop/package.json`에 `@sentry/browser-utils`(`10.70.0`)를 명시적 direct dependency로 추가하고 재빌드해, asar 내부에 해당 모듈이 정상 포함됨을 `asar list`로 실측 확인
+  - See: 이 문서 상단 Task 016-5 항목, `apps/desktop/package.json`(build/repository/dependencies 설정)
 
 ---
 
 **📅 최종 업데이트**: 2026-08-28
-**📊 진행 상황**: Phase 4 진행 중 (15/17 Tasks 완료)
+**📊 진행 상황**: Phase 4 완료 (17/17 Tasks 완료)
