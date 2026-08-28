@@ -1,5 +1,9 @@
 import { contextBridge, ipcRenderer } from "electron";
 
+// Sentry가 main<->renderer IPC 채널을 구성한다. main에서 SENTRY_DSN 미설정으로 초기화를 건너뛰었어도
+// 이 브리지 등록 자체는 부작용이 없어(단순 IPC 채널 등록) 항상 불러와도 안전하다
+import "@sentry/electron/preload";
+
 contextBridge.exposeInMainWorld("electronAPI", {
   ping: () => "pong",
   // grow:// 딥링크로 수신한 Supabase OAuth 콜백 URL을 렌더러로 전달

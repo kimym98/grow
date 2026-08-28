@@ -1,5 +1,6 @@
 "use client"
 
+import { useEffect } from "react"
 import { usePathname } from "next/navigation"
 import { Sidebar } from "@/components/layout/sidebar"
 import { SidebarMobile } from "@/components/layout/sidebar-mobile"
@@ -8,6 +9,7 @@ import { CommandPalette } from "@/components/command-palette"
 import { SITE_CONFIG } from "@/lib/constants"
 import { useAuth } from "@/providers/auth-provider"
 import { useCollectionRealtimeNotifications } from "@/lib/realtime-sync"
+import { initSentryRenderer } from "@/lib/sentry"
 
 /** 로그인 세션이 있을 때만 Realtime 구독을 마운트한다 (postgres_changes는 인증된 private 채널에서만 동작) */
 function CollectionRealtimeNotifier() {
@@ -23,6 +25,10 @@ export function AppShell({ children }: AppShellProps) {
   const pathname = usePathname()
   const isAuthRoute = pathname === "/login"
   const { session } = useAuth()
+
+  useEffect(() => {
+    initSentryRenderer()
+  }, [])
 
   if (isAuthRoute) {
     return (
