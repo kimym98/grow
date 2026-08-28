@@ -4,7 +4,16 @@ import { usePathname } from "next/navigation"
 import { Sidebar } from "@/components/layout/sidebar"
 import { SidebarMobile } from "@/components/layout/sidebar-mobile"
 import { ThemeToggle } from "@/components/layout/theme-toggle"
+import { CommandPalette } from "@/components/command-palette"
 import { SITE_CONFIG } from "@/lib/constants"
+import { useAuth } from "@/providers/auth-provider"
+import { useCollectionRealtimeNotifications } from "@/lib/realtime-sync"
+
+/** 로그인 세션이 있을 때만 Realtime 구독을 마운트한다 (postgres_changes는 인증된 private 채널에서만 동작) */
+function CollectionRealtimeNotifier() {
+  useCollectionRealtimeNotifications()
+  return null
+}
 
 interface AppShellProps {
   children: React.ReactNode
@@ -13,6 +22,7 @@ interface AppShellProps {
 export function AppShell({ children }: AppShellProps) {
   const pathname = usePathname()
   const isAuthRoute = pathname === "/login"
+  const { session } = useAuth()
 
   if (isAuthRoute) {
     return (
@@ -24,6 +34,8 @@ export function AppShell({ children }: AppShellProps) {
 
   return (
     <div className="flex h-full">
+      {session && <CollectionRealtimeNotifier />}
+      <CommandPalette />
       <Sidebar />
 
       <div className="flex flex-1 flex-col min-w-0">

@@ -4,6 +4,8 @@ import { useRouter } from "next/navigation"
 import { LogOut } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { LlmKeySettings } from "@/components/sections/settings/llm-key-settings"
+import { AutoUpdateInfo } from "@/components/sections/settings/auto-update-info"
+import { AppBehaviorSettings } from "@/components/sections/settings/app-behavior-settings"
 import { useAuth } from "@/providers/auth-provider"
 
 export default function SettingsPage() {
@@ -25,6 +27,10 @@ export default function SettingsPage() {
       </div>
 
       <LlmKeySettings />
+
+      <AutoUpdateInfo />
+
+      <AppBehaviorSettings />
 
       <Button variant="destructive" className="w-fit" onClick={handleLogout}>
         <LogOut />

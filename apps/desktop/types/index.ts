@@ -35,6 +35,14 @@ export interface ElectronApi {
   syncNotificationSettings: (
     settings: import("@/lib/notification-settings").NotificationSettingsValue
   ) => void
+  /** Supabase Realtime으로 감지한 신규 공고/뉴스 수집 완료를 OS 알림으로 표시하도록 요청한다 */
+  showCollectionNotification: (title: string, body: string) => void
+  /** OS 로그인 시 앱을 자동 실행할지 설정한다 */
+  setLoginItemEnabled: (enabled: boolean) => void
+  /** 현재 OS 로그인 자동 실행 설정 여부를 조회한다 */
+  getLoginItemEnabled: () => Promise<boolean>
+  /** 창을 닫아도 트레이 아이콘으로 백그라운드에 남아있을지 설정한다 */
+  setTrayEnabled: (enabled: boolean) => void
 }
 
 declare global {

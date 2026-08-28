@@ -1,6 +1,7 @@
-import { app, BrowserWindow, ipcMain, Notification } from "electron";
+import { app, BrowserWindow, ipcMain, Notification, Tray, Menu, nativeImage } from "electron";
 import path from "path";
 import nodeSchedule from "node-schedule";
+import { autoUpdater } from "electron-updater";
 
 import {
   shouldTriggerDailySummary,
@@ -11,6 +12,9 @@ import {
 const AUTH_PROTOCOL = "grow";
 
 let mainWindow: BrowserWindow | null = null;
+let tray: Tray | null = null;
+// 창을 닫아도 백그라운드(트레이)에 남아있을지 여부. 기본 false로 기존 동작(비-macOS는 창 닫으면 종료)을 보존한다
+let keepInTrayEnabled = false;
 
 interface NotificationSettingsValue {
   dailySummaryEnabled: boolean;
@@ -77,6 +81,113 @@ function registerNotificationHandlers() {
   });
 }
 
+function registerCollectionNotificationHandlers() {
+  ipcMain.on(
+    "show-collection-notification",
+    (_event, payload: { title: string; body: string }) => {
+      console.log("[collection-notification] showing:", payload.title, payload.body);
+      new Notification({ title: payload.title, body: payload.body }).show();
+    }
+  );
+}
+
+/**
+ * electron-builder publish(GitHub Releases)로 배포된 신규 버전을 확인하고, 있으면 자동으로 다운로드한다.
+ * 개발 모드에서는 배포된 릴리스가 없어 업데이트 없음/네트워크 오류로 끝나는 것이 정상이며,
+ * macOS는 코드 서명이 없으면 자동 업데이트 자체가 동작하지 않는다(docs/task015-research.md 참고).
+ * Windows는 verifyUpdateCodeSignature를 false로 설정해 서명 없이도 설치가 진행되도록 했다.
+ */
+function registerAutoUpdateHandlers() {
+  autoUpdater.on("update-available", (info) => {
+    console.log("[auto-update] 업데이트 발견:", info.version);
+    new Notification({
+      title: "업데이트 다운로드 중",
+      body: `새 버전 ${info.version}을 다운로드하고 있습니다`,
+    }).show();
+  });
+
+  autoUpdater.on("update-downloaded", (info) => {
+    console.log("[auto-update] 다운로드 완료:", info.version);
+    new Notification({
+      title: "업데이트 준비 완료",
+      body: "앱을 재시작하면 새 버전이 적용됩니다",
+    }).show();
+  });
+
+  autoUpdater.on("error", (error) => {
+    console.error("[auto-update] 오류:", error.message);
+  });
+
+  autoUpdater.checkForUpdatesAndNotify().catch((error) => {
+    console.error("[auto-update] 업데이트 확인 실패:", error.message);
+  });
+}
+
+/** 프로젝트에 아이콘 이미지 자산이 없어, 트레이 표시용 단색 16x16 아이콘을 런타임에 raw RGBA 버퍼로 생성한다 */
+function createTrayIcon() {
+  const size = 16;
+  const buffer = Buffer.alloc(size * size * 4);
+  for (let i = 0; i < size * size; i += 1) {
+    buffer[i * 4] = 79; // R
+    buffer[i * 4 + 1] = 70; // G
+    buffer[i * 4 + 2] = 229; // B (indigo 계열)
+    buffer[i * 4 + 3] = 255; // A
+  }
+  return nativeImage.createFromBuffer(buffer, { width: size, height: size });
+}
+
+function ensureTray() {
+  if (tray) return;
+
+  tray = new Tray(createTrayIcon());
+  tray.setToolTip("AI 취업 비서");
+  tray.setContextMenu(
+    Menu.buildFromTemplate([
+      {
+        label: "열기",
+        click: () => {
+          if (mainWindow) {
+            mainWindow.show();
+            mainWindow.focus();
+          } else {
+            createWindow();
+          }
+        },
+      },
+      { label: "종료", click: () => app.quit() },
+    ])
+  );
+  tray.on("click", () => {
+    if (mainWindow) {
+      mainWindow.show();
+      mainWindow.focus();
+    } else {
+      createWindow();
+    }
+  });
+}
+
+function destroyTray() {
+  tray?.destroy();
+  tray = null;
+}
+
+function registerLoginItemHandlers() {
+  ipcMain.on("set-login-item-enabled", (_event, enabled: boolean) => {
+    app.setLoginItemSettings({ openAtLogin: enabled });
+  });
+
+  ipcMain.handle("get-login-item-enabled", () => app.getLoginItemSettings().openAtLogin);
+}
+
+function registerTrayHandlers() {
+  ipcMain.on("set-tray-enabled", (_event, enabled: boolean) => {
+    keepInTrayEnabled = enabled;
+    if (enabled) ensureTray();
+    else destroyTray();
+  });
+}
+
 function sendAuthCallback(url: string) {
   console.log("[auth-callback] received deep link:", url);
   mainWindow?.webContents.send("auth-callback", url);
@@ -98,6 +209,10 @@ function createWindow() {
   });
 
   mainWindow = win;
+
+  win.on("closed", () => {
+    mainWindow = null;
+  });
 
   const devUrl = "http://localhost:3000";
   win.loadURL(
@@ -136,6 +251,10 @@ if (!gotSingleInstanceLock) {
   app.whenReady().then(() => {
     createWindow();
     registerNotificationHandlers();
+    registerCollectionNotificationHandlers();
+    registerAutoUpdateHandlers();
+    registerLoginItemHandlers();
+    registerTrayHandlers();
 
     const callbackUrl = findAuthCallbackUrl(process.argv);
     if (callbackUrl) {
@@ -150,6 +269,8 @@ if (!gotSingleInstanceLock) {
   });
 
   app.on("window-all-closed", () => {
+    // 트레이 유지 옵션이 꺼져 있으면 기존 동작(비-macOS는 창을 닫으면 앱 종료)을 그대로 보존한다
+    if (keepInTrayEnabled) return;
     if (process.platform !== "darwin") {
       app.quit();
     }

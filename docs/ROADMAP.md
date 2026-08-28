@@ -191,11 +191,14 @@ AI 취업 비서는 IT 직군 취업 준비생을 위한 노션형 올인원 데
 
 ### Phase 4: 고급 기능 및 최적화
 
-- **Task 015: 사용자 경험 향상 및 부가 기능**
-  - 전역 검색(커맨드 팔레트), 키보드 단축키, 최근 항목/즐겨찾기
-  - Supabase Realtime 기반 데이터 동기화 및 수집 완료 알림
-  - 오프라인 캐시/낙관적 업데이트, 앱 자동 업데이트(electron-updater)
-  - OS 로그인 시 백그라운드 자동 실행 옵션(앱 종료 상태 알림 보장 검토)
+- ✅ **Task 015: 사용자 경험 향상 및 부가 기능**
+  - ✅ 사전 조사(electron-updater 서명 제약, Supabase Realtime 구독 패턴, cmdk 호환성)로 오프라인 캐시 범위를 "최근 조회 표시용 캐시"로 축소, 자동 실행 기본값 OFF 결정
+  - ✅ CLAUDE.md 표준인 Zustand를 프로젝트 최초로 도입(`lib/stores/recent-favorites-store.ts`, localStorage persist)해 최근 항목/즐겨찾기 구현. shadcn Command(cmdk) 기반 Cmd/Ctrl+K 전역 커맨드팔레트로 공고/뉴스/문서/퀴즈를 통합 검색. `CommandDialog` 내부에 `<Command>`로 감싸지 않아 cmdk 컨텍스트가 undefined가 되는 런타임 에러를 Playwright 콘솔에서 발견해 수정
+  - ✅ `job_postings`/`tech_news` Realtime(postgres_changes INSERT) 구독으로 신규 수집 시 OS 알림(3초 디바운스로 묶어 발송). 구현 중 두 테이블이 `supabase_realtime` publication에 애초에 등록되어 있지 않았음을 발견해 마이그레이션으로 추가했고, 사전 조사에서 안내한 `private: true` 채널이 이 프로젝트에서는 `TIMED_OUT`을 유발함을 실측으로 발견해 공개 채널 구독으로 전환(RLS가 무조건 허용이라 안전)
+  - ✅ electron-updater 도입(GitHub Releases 배포, Windows `verifyUpdateCodeSignature: false`) — devDependencies가 아닌 dependencies로 정정 배치(패키징된 앱 런타임에 필요). macOS는 서명 없이 자동 업데이트 자체가 불가능함을 문서화
+  - ✅ `app.setLoginItemSettings` 기반 OS 로그인 시 자동 실행 토글, Tray(런타임 raw 버퍼로 생성한 아이콘) 기반 "창을 닫아도 백그라운드 유지" 옵션(기본 OFF로 기존 창 닫기 동작 보존) 구현. 앱이 완전히 종료된 상태에서는 IPC 캐시 구조상 알림이 보장되지 않음을 문서화
+  - ✅ 검증: Playwright MCP로 전역 검색/최근항목/즐겨찾기 localStorage 유지, Realtime 채널 SUBSCRIBED 및 Supabase SQL 직접 INSERT 수신을 확인. Electron `BrowserWindow`는 Playwright로 제어 불가(Task 011과 동일 제약)해 OS 알림 팝업 자체, 로그인 항목/트레이 토글의 실제 클릭 E2E는 자동화하지 못했으나, `app.setLoginItemSettings`/`Tray` 생성 API가 이 환경에서 정상 동작(Windows 시작 항목 실제 등록/해제 확인)함을 Electron 헤드리스 스크립트로 별도 실측
+  - See: /docs/task015-research.md, /docs/regression-checklist.md
 
 - **Task 016: 성능 최적화, 배포 및 모니터링**
   - 렌더러 번들 최적화(코드 스플리팅, 서버 컴포넌트 활용), 목록 가상화
@@ -211,4 +214,4 @@ AI 취업 비서는 IT 직군 취업 준비생을 위한 노션형 올인원 데
 ---
 
 **📅 최종 업데이트**: 2026-08-28
-**📊 진행 상황**: Phase 3 완료 (14/17 Tasks 완료)
+**📊 진행 상황**: Phase 4 진행 중 (15/17 Tasks 완료)

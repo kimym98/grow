@@ -15,6 +15,17 @@ import type { LlmProviderName } from "@/lib/llm-keys"
 
 export const QUESTIONS_PER_CATEGORY_SESSION = 5
 
+/** 퀴즈 카테고리 값을 한국어 라벨로 변환한다 (커맨드팔레트, 결과 화면 등에서 공용 사용) */
+export const QUIZ_CATEGORY_LABELS: Record<QuizSession["category"], string> = {
+  os: "운영체제",
+  network: "네트워크",
+  database: "데이터베이스",
+  "data-structure": "자료구조/알고리즘",
+  "ai-llm": "AI/LLM",
+  frontend: "프론트엔드",
+  mixed: "모의고사",
+}
+
 /**
  * 단일 카테고리 문제를 무작위로 조회한다 (cs_questions는 전체 공개 읽기).
  * get_random_quiz_questions RPC에 카테고리를 지정해 객관식/서술형이 고르게 섞이도록 한다

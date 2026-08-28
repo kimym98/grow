@@ -5,6 +5,7 @@ import { useSearchParams } from "next/navigation"
 import { toast } from "sonner"
 import type { CsQuestion } from "@app/shared"
 
+import { useRecentFavoritesStore } from "@/lib/stores/recent-favorites-store"
 import { QuizPlayView, type QuestionResponse, type QuestionGradeResult } from "@/components/sections/quiz/quiz-play-view"
 import { QuizResultSummary } from "@/components/sections/quiz/quiz-result-summary"
 import { MIXED_CATEGORY, MOCK_EXAM_QUESTION_COUNT } from "@/components/sections/quiz/quiz-category"
@@ -17,6 +18,7 @@ import {
   fetchQuizSessionDetail,
   gradeShortAnswer,
   recordMultipleChoiceAnswer,
+  QUIZ_CATEGORY_LABELS,
   type QuizSessionDetail,
 } from "@/lib/quiz"
 
@@ -36,6 +38,20 @@ function QuizSessionPageClient({ sessionId }: QuizSessionPageClientProps) {
 
   const [state, setState] = useState<State>({ status: "loading" })
   const [provider, setProvider] = useState<"gemini" | "anthropic" | null>(null)
+  const addRecent = useRecentFavoritesStore((s) => s.addRecent)
+
+  useEffect(() => {
+    if (state.status !== "result") return
+
+    addRecent({
+      key: `quiz:${state.detail.session.id}`,
+      type: "quiz",
+      id: state.detail.session.id,
+      title: `${QUIZ_CATEGORY_LABELS[state.detail.session.category]} 퀴즈 세션`,
+      subtitle: `${state.detail.session.correctCount}/${state.detail.session.totalCount} 정답`,
+      href: `/quiz/${state.detail.session.id}`,
+    })
+  }, [addRecent, state])
 
   useEffect(() => {
     let cancelled = false

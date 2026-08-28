@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import Link from "next/link"
 import { toast } from "sonner"
 import type { JobPosting } from "@app/shared"
@@ -8,6 +8,7 @@ import type { JobPosting } from "@app/shared"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { createSchedule } from "@/lib/schedules"
+import { useRecentFavoritesStore } from "@/lib/stores/recent-favorites-store"
 
 interface JobDetailContentProps {
   job: JobPosting
@@ -27,6 +28,18 @@ function JobDetailContent({ job }: JobDetailContentProps) {
   const dDay = getDDay(job.deadline)
   const dDayLabel = dDay === null ? "상시채용" : dDay < 0 ? "마감" : dDay === 0 ? "D-Day" : `D-${dDay}`
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const addRecent = useRecentFavoritesStore((state) => state.addRecent)
+
+  useEffect(() => {
+    addRecent({
+      key: `job:${job.id}`,
+      type: "job",
+      id: job.id,
+      title: job.title,
+      subtitle: job.company,
+      href: `/jobs/${job.id}`,
+    })
+  }, [addRecent, job.id, job.title, job.company])
 
   async function handleAddToSchedule() {
     if (!job.deadline) return

@@ -10,6 +10,7 @@ import type { DocumentUploadFormValues } from "@/lib/validators"
 import { uploadDocument } from "@/lib/document-upload"
 import { fetchDocumentReviews, triggerDocumentReview } from "@/lib/document-reviews"
 import { fetchLlmKeyStatuses, type LlmProviderName } from "@/lib/llm-keys"
+import { useRecentFavoritesStore } from "@/lib/stores/recent-favorites-store"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
 import { Dialog } from "@/components/ui/dialog"
@@ -40,6 +41,21 @@ function DocumentsPageClient({ initialSelectedId }: DocumentsPageClientProps) {
     () => documents.find((document) => document.id === selectedDocumentId) ?? null,
     [documents, selectedDocumentId]
   )
+
+  const addRecent = useRecentFavoritesStore((state) => state.addRecent)
+
+  useEffect(() => {
+    if (!selectedDocument) return
+
+    addRecent({
+      key: `document:${selectedDocument.id}`,
+      type: "document",
+      id: selectedDocument.id,
+      title: selectedDocument.title,
+      subtitle: selectedDocument.type === "resume" ? "자소서" : "포트폴리오",
+      href: `/documents/${selectedDocument.id}`,
+    })
+  }, [addRecent, selectedDocument])
 
   const loadDocuments = useCallback(async () => {
     try {

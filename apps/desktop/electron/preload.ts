@@ -17,4 +17,18 @@ contextBridge.exposeInMainWorld("electronAPI", {
   syncNotificationSettings: (settings: unknown) => {
     ipcRenderer.send("sync-notification-settings", settings);
   },
+  // Supabase Realtime으로 감지한 신규 공고/뉴스 수집 완료를 OS 알림으로 표시 요청
+  showCollectionNotification: (title: string, body: string) => {
+    ipcRenderer.send("show-collection-notification", { title, body });
+  },
+  // OS 로그인 시 앱을 자동 실행할지 설정한다
+  setLoginItemEnabled: (enabled: boolean) => {
+    ipcRenderer.send("set-login-item-enabled", enabled);
+  },
+  // 현재 OS 로그인 자동 실행 설정 여부를 조회한다
+  getLoginItemEnabled: () => ipcRenderer.invoke("get-login-item-enabled") as Promise<boolean>,
+  // 창을 닫아도 트레이 아이콘으로 백그라운드에 남아있을지 설정한다
+  setTrayEnabled: (enabled: boolean) => {
+    ipcRenderer.send("set-tray-enabled", enabled);
+  },
 });
