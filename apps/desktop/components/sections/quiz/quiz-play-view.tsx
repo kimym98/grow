@@ -97,7 +97,7 @@ function QuizPlayView({ category, questions, onSubmitAnswer, onComplete }: QuizP
 
         {currentQuestion.questionType === "multiple-choice" ? (
           <RadioGroup
-            value={selected === null ? undefined : String(selected)}
+            value={selected === null ? "" : String(selected)}
             onValueChange={(value) => setSelected(Number(value))}
             disabled={phase !== "answering"}
           >
