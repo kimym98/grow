@@ -164,24 +164,17 @@ function registerAutoUpdateHandlers() {
   });
 }
 
-/** 프로젝트에 아이콘 이미지 자산이 없어, 트레이 표시용 단색 16x16 아이콘을 런타임에 raw RGBA 버퍼로 생성한다 */
+const APP_ICON_PATH = path.join(__dirname, "icon.png");
+
 function createTrayIcon() {
-  const size = 16;
-  const buffer = Buffer.alloc(size * size * 4);
-  for (let i = 0; i < size * size; i += 1) {
-    buffer[i * 4] = 79; // R
-    buffer[i * 4 + 1] = 70; // G
-    buffer[i * 4 + 2] = 229; // B (indigo 계열)
-    buffer[i * 4 + 3] = 255; // A
-  }
-  return nativeImage.createFromBuffer(buffer, { width: size, height: size });
+  return nativeImage.createFromPath(APP_ICON_PATH).resize({ width: 16, height: 16 });
 }
 
 function ensureTray() {
   if (tray) return;
 
   tray = new Tray(createTrayIcon());
-  tray.setToolTip("AI 취업 비서");
+  tray.setToolTip("Grow");
   tray.setContextMenu(
     Menu.buildFromTemplate([
       {
@@ -242,6 +235,7 @@ function createWindow() {
   const win = new BrowserWindow({
     width: 1280,
     height: 800,
+    icon: APP_ICON_PATH,
     webPreferences: {
       contextIsolation: true,
       nodeIntegration: false,

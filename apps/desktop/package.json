@@ -13,12 +13,13 @@
     "build": "next build && npm run build:electron",
     "start": "next start",
     "lint": "eslint",
-    "build:electron": "tsc -p electron/tsconfig.json --outDir dist/electron",
+    "build:electron": "tsc -p electron/tsconfig.json --outDir dist/electron && node -e \"require('fs').copyFileSync('resources/icon.png','dist/electron/icon.png')\"",
     "test": "vitest run"
   },
   "build": {
     "appId": "com.grow.desktop",
-    "productName": "AI 취업 비서",
+    "productName": "Grow",
+    "icon": "resources/icon.png",
     "files": [
       "dist/electron/**/*",
       "out/**/*"
