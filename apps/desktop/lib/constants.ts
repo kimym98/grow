@@ -9,7 +9,7 @@ import {
 import type { NavItem, SiteConfig } from "@/types"
 
 export const SITE_CONFIG: SiteConfig = {
-  name: "AI 취업 비서",
+  name: "Grow",
   description: "IT 취업 준비생을 위한 공고 탐색·서류 첨삭·면접 준비·일정 관리 올인원 워크스페이스",
   url: "https://example.com",
 }

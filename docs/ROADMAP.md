@@ -1,10 +1,10 @@
-# AI 취업 비서 데스크탑 앱 개발 로드맵
+# Grow 데스크탑 앱 개발 로드맵
 
 IT 취업 준비생의 공고 탐색·서류 첨삭·면접 준비·일정 관리를 하나의 데스크탑 앱으로 통합합니다.
 
 ## 개요
 
-AI 취업 비서는 IT 직군 취업 준비생을 위한 노션형 올인원 데스크탑 워크스페이스로 다음 기능을 제공합니다:
+Grow는 IT 직군 취업 준비생을 위한 노션형 올인원 데스크탑 워크스페이스로 다음 기능을 제공합니다:
 
 - **채용 공고 수집/탐색**: 공식 API·RSS 기반 자동 수집, 직무/지역/경력 필터와 검색, 상세 보기
 - **캘린더 일정관리**: 월/주 뷰 대시보드, 메모·체크리스트, 공고 마감일 연동, Electron 네이티브 알림
@@ -213,7 +213,7 @@ AI 취업 비서는 IT 직군 취업 준비생을 위한 노션형 올인원 데
   - ✅ `npm run build` 실제 실행으로 `out/index.html`, `out/jobs/placeholder`, `out/documents/placeholder`, `out/quiz/placeholder` 등 산출물이 정상 생성됨을 확인
   - ✅ `electron-builder` 로컬 Windows 패키징 성공. 최초 시도 시 `CSC_IDENTITY_AUTO_DISCOVERY=false`로 코드서명을 꺼도 electron-builder가 Windows 타겟 빌드에서도 내부적으로 `winCodeSign` 바이너리 패키지를 항상 내려받아 압축 해제를 시도했고, Windows 개발자 모드 레지스트리 값(`AllowDevelopmentWithoutDevLicense`)은 켜져 있었으나 재로그인 전이라 현재 세션 토큰에 반영되지 않아 macOS용 `.dylib` 심볼릭 링크 생성이 `EPERM`으로 실패 → 무한 재다운로드·재시도에 빠지는 것을 실측 확인. 사용자가 개발자 모드를 다시 켜고(재로그인 반영) 재시도하자 winCodeSign 추출이 정상 동작함을 확인
   - ✅ 패키징 재시도 중 별도의 실제 버그 1건 추가 발견 및 수정: `apps/desktop`이 모노레포 하위 폴더라 `.git`이 없어 electron-builder가 repository를 자동 감지하지 못했고, `build.publish.provider: "github"` 설정과 결합되어 업데이트 메타데이터(`latest.yml`) 생성 단계에서 `Cannot read properties of null (reading 'provider')`로 크래시 — `apps/desktop/package.json`에 `repository`(`github.com/kimym98/grow`, `directory: apps/desktop`) 필드를 명시해 해결
-  - ✅ 최종 검증: `dist/AI 취업 비서 Setup 0.1.0.exe`, `.blockmap`, `latest.yml`이 모두 정상 생성되고 electron-builder가 exit code 0으로 종료됨을 확인. 코드서명은 로컬 검증을 위해 껐을 뿐이며(`verifyUpdateCodeSignature: false`), 실제 배포 시에는 정식 코드 서명이 필요함
+  - ✅ 최종 검증: `dist/Grow Setup 0.1.0.exe`, `.blockmap`, `latest.yml`이 모두 정상 생성되고 electron-builder가 exit code 0으로 종료됨을 확인. 코드서명은 로컬 검증을 위해 껐을 뿐이며(`verifyUpdateCodeSignature: false`), 실제 배포 시에는 정식 코드 서명이 필요함
   - ✅ 설치 파일을 실제로 설치·실행해보니 main process에서 `Cannot find module '@sentry/browser-utils'`로 크래시하는 런타임 버그를 추가 발견. 원인은 `@sentry/electron` → `@sentry/browser`의 전이 의존성인 `@sentry/browser-utils`가 npm workspaces 모노레포에서 루트 `node_modules`에만 존재해, electron-builder가 `apps/desktop` 기준으로 프로덕션 의존성을 계산할 때 이를 놓치고 asar 패키지에서 빠뜨린 것 — `apps/desktop/package.json`에 `@sentry/browser-utils`(`10.70.0`)를 명시적 direct dependency로 추가하고 재빌드해, asar 내부에 해당 모듈이 정상 포함됨을 `asar list`로 실측 확인
   - See: 이 문서 상단 Task 016-5 항목, `apps/desktop/package.json`(build/repository/dependencies 설정)
 

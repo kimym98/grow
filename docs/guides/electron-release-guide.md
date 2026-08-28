@@ -1,6 +1,6 @@
 # Electron 데스크탑 앱 배포 가이드
 
-이 문서는 `apps/desktop`(AI 취업 비서 Electron 앱)을 실제로 빌드하고 배포하는 **실행 절차**를 정리한다. 왜 이런 구조인지(코드 서명, ASAR, electron-updater 원리 등)는 `docs/deployment_research.md`를 참고하고, 이 문서는 "지금 무엇을 실행해야 하는가"에 집중한다.
+이 문서는 `apps/desktop`(Grow Electron 앱)을 실제로 빌드하고 배포하는 **실행 절차**를 정리한다. 왜 이런 구조인지(코드 서명, ASAR, electron-updater 원리 등)는 `docs/deployment_research.md`를 참고하고, 이 문서는 "지금 무엇을 실행해야 하는가"에 집중한다.
 
 ## 결론 요약
 
@@ -25,10 +25,10 @@ npx electron-builder --win # NSIS 인스톨러 생성
 
 | 파일 | 용도 |
 | --- | --- |
-| `AI 취업 비서 Setup 0.1.0.exe` | 사용자에게 배포할 실제 설치 파일 |
-| `AI 취업 비서 Setup 0.1.0.exe.blockmap` | electron-updater가 증분 업데이트(변경분만 다운로드) 계산에 쓰는 파일 |
+| `Grow Setup 0.1.0.exe` | 사용자에게 배포할 실제 설치 파일 |
+| `Grow Setup 0.1.0.exe.blockmap` | electron-updater가 증분 업데이트(변경분만 다운로드) 계산에 쓰는 파일 |
 | `latest.yml` | electron-updater가 "새 버전이 있는지" 판단할 때 읽는 버전 메타데이터 |
-| `win-unpacked/` | 압축 전 원본 폴더. 배포용이 아니라 디버깅용(설치 없이 `AI 취업 비서.exe`를 바로 실행해볼 수 있음) |
+| `win-unpacked/` | 압축 전 원본 폴더. 배포용이 아니라 디버깅용(설치 없이 `Grow.exe`를 바로 실행해볼 수 있음) |
 
 ### 로컬 패키징이 실패한다면 (Windows 전용 이슈)
 
