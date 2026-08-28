@@ -1,24 +1,33 @@
 "use client"
 
 import { useRouter } from "next/navigation"
-import { Database, HardDrive, Network, Workflow } from "lucide-react"
-import type { CsQuestionFixture } from "@app/shared"
+import { Bot, Database, HardDrive, Layout, Network, Trophy, Workflow } from "lucide-react"
+import type { CsQuestion } from "@app/shared"
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { CATEGORY_LABELS, CATEGORIES } from "@/components/sections/quiz/quiz-category"
+import {
+  CATEGORIES,
+  CATEGORY_LABELS,
+  MIXED_CATEGORY,
+  MIXED_LABEL,
+  MOCK_EXAM_QUESTION_COUNT,
+} from "@/components/sections/quiz/quiz-category"
 
-const CATEGORY_ICONS: Record<CsQuestionFixture["category"], typeof Network> = {
+const CATEGORY_ICONS: Record<CsQuestion["category"], typeof Network> = {
   network: Network,
   database: Database,
   os: HardDrive,
   "data-structure": Workflow,
+  "ai-llm": Bot,
+  frontend: Layout,
 }
 
 function QuizCategorySelect() {
   const router = useRouter()
 
-  function handleSelect(category: CsQuestionFixture["category"]) {
-    const sessionId = `session-${crypto.randomUUID()}`
+  function handleSelect(category: CsQuestion["category"] | typeof MIXED_CATEGORY) {
+    // quiz_sessions.id는 uuid 컬럼이므로 접두사 없는 순수 uuid를 사용해야 세션 생성이 가능하다
+    const sessionId = crypto.randomUUID()
     router.push(`/quiz/${sessionId}?category=${category}`)
   }
 
@@ -43,6 +52,18 @@ function QuizCategorySelect() {
             </button>
           )
         })}
+
+        <button type="button" onClick={() => handleSelect(MIXED_CATEGORY)} className="text-left">
+          <Card className="border-primary/50 transition-colors hover:bg-muted focus-visible:bg-muted">
+            <CardHeader>
+              <Trophy className="size-5 text-primary" />
+              <CardTitle>{MIXED_LABEL}</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-xs text-muted-foreground">전체 카테고리 {MOCK_EXAM_QUESTION_COUNT}문항 무작위 출제</p>
+            </CardContent>
+          </Card>
+        </button>
       </div>
     </div>
   )

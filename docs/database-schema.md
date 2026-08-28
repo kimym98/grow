@@ -206,37 +206,65 @@ create index on document_reviews (user_id, updated_at desc);
 
 ## 5. cs_questions (CS 면접 퀴즈 문제 뱅크)
 
-카테고리별 문제 뱅크. 자체 큐레이션 데이터이며 전체 사용자에게 공개된다.
+카테고리별 문제 뱅크. 자체 큐레이션 데이터이며 전체 사용자에게 공개된다. Task 014에서 서술형 문제(AI 채점)와 신규 카테고리(ai-llm, frontend)를 지원하도록 확장했다.
 
 | 컬럼 | 타입 | Nullable | 기본값 | 설명 |
 |---|---|---|---|---|
 | id | uuid | NOT NULL | gen_random_uuid() | PK |
-| category | text | NOT NULL | | network / database / os / data-structure |
+| category | text | NOT NULL | | network / database / os / data-structure / ai-llm / frontend |
 | question | text | NOT NULL | | 문제 |
-| answer | text | NOT NULL | | 모범 답안 |
-| choices | text[] | NOT NULL | | 4지선다 보기 |
-| correct_index | integer | NOT NULL | | 정답 인덱스 |
+| answer | text | NOT NULL | | 모범 답안(서술형은 AI 채점 기준으로도 사용) |
+| question_type | text | NOT NULL | 'multiple-choice' | multiple-choice / short-answer |
+| choices | text[] | NULLABLE | | 4지선다 보기(객관식만 필수) |
+| correct_index | integer | NULLABLE | | 정답 인덱스(객관식만 필수) |
 | created_at | timestamptz | NOT NULL | now() | |
 | updated_at | timestamptz | NOT NULL | now() | |
 
 - **인덱스**: `INDEX (category)`
-- **upsert 고유키**: 없음(시딩 스크립트로 직접 관리, Task 014에서 시딩)
-- **제약**: `category CHECK (category IN ('network','database','os','data-structure'))`
-- **RLS 정책 초안**: 전체 공개 읽기(`SELECT` — `USING (true)`), 쓰기는 관리자/시딩 스크립트만
+- **upsert 고유키**: 없음(시딩 스크립트로 직접 관리)
+- **제약**:
+  - `cs_questions_category_check`: `category IN ('network','database','os','data-structure','ai-llm','frontend')`
+  - `cs_questions_type_fields_check`: `question_type='multiple-choice'`면 `choices`/`correct_index` 필수, `question_type='short-answer'`면 둘 다 NULL이어야 함
+- **RLS 정책 초안**: 전체 공개 읽기(`SELECT` — `USING (true)`), 쓰기는 관리자/시딩 스크립트만(정책은 Task 009에서 적용, 컬럼 추가만으로는 재적용 불필요)
+- **초기 문제 뱅크 시딩(Task 014, 1회 실행 완료)**: 6개 카테고리 × 20문항(객관식 14 + 서술형 6) = 총 120문항. WebSearch로 카테고리별 최신 CS 면접 질문 "주제"만 조사한 뒤(실제 문장은 그대로 사용하지 않고 주제만 참고), AI가 문항·모범답안을 직접 작성해 `mcp__supabase__execute_sql`로 반영했다. 재실행 시 upsert 고유키가 없어 중복이 발생하므로 재시딩이 필요하면 기존 행을 먼저 삭제해야 한다.
 
 ```sql
--- 참고용 예시, 실행하지 않음
+-- 참고용 예시, 실행하지 않음(실제 반영은 Task 009 최초 생성 + Task 014 ALTER TABLE로 진행)
 create table cs_questions (
   id uuid primary key default gen_random_uuid(),
-  category text not null check (category in ('network','database','os','data-structure')),
+  category text not null check (category in ('network','database','os','data-structure','ai-llm','frontend')),
   question text not null,
   answer text not null,
-  choices text[] not null,
-  correct_index integer not null,
+  question_type text not null default 'multiple-choice' check (question_type in ('multiple-choice','short-answer')),
+  choices text[],
+  correct_index integer,
   created_at timestamptz not null default now(),
-  updated_at timestamptz not null default now()
+  updated_at timestamptz not null default now(),
+  constraint cs_questions_type_fields_check check (
+    (question_type = 'multiple-choice' and choices is not null and correct_index is not null)
+    or
+    (question_type = 'short-answer' and choices is null and correct_index is null)
+  )
 );
 create index on cs_questions (category);
+```
+
+### get_random_quiz_questions(p_count int, p_category text default null) RPC
+
+전체 카테고리를 아우르는 모의고사(종합 시험) 모드 및 단일 카테고리 무작위 출제에 공용으로 사용하는 함수. `p_category`가 NULL이면 전체 카테고리에서, 값이 있으면 해당 카테고리 내에서만 무작위 추출한다(단일 카테고리 조회 시 `created_at` 순으로 가져오면 카테고리당 객관식을 먼저 시딩한 순서 때문에 서술형 문항이 노출되지 않는 문제가 있어 Task 014 E2E 검증 중 이 방식으로 수정했다). `cs_questions`가 전체 공개 읽기 테이블이므로 `SECURITY INVOKER`(기본값)로 충분하다.
+
+```sql
+create or replace function get_random_quiz_questions(p_count int, p_category text default null)
+returns setof cs_questions
+language sql
+stable
+set search_path = public
+as $$
+  select * from cs_questions
+  where p_category is null or category = p_category
+  order by random()
+  limit p_count;
+$$;
 ```
 
 ---
@@ -249,13 +277,14 @@ create index on cs_questions (category);
 |---|---|---|---|---|
 | id | uuid | NOT NULL | gen_random_uuid() | PK |
 | user_id | uuid | NOT NULL | | auth.users 참조 |
-| category | text | NOT NULL | | 풀이한 카테고리 |
+| category | text | NOT NULL | | 풀이한 카테고리, 전체 카테고리 모의고사는 'mixed' |
 | total_count | integer | NOT NULL | | 총 문제 수 |
 | correct_count | integer | NOT NULL | | 정답 수 |
 | created_at | timestamptz | NOT NULL | now() | 세션 시작(완료) 일시 |
 
 - **인덱스**: `INDEX (user_id, created_at desc)`
 - **upsert 고유키**: 없음
+- **제약**: `quiz_sessions_category_check`: `category IN ('network','database','os','data-structure','ai-llm','frontend','mixed')` (Task 014에서 추가)
 - **RLS 정책 초안**: `auth.uid() = user_id` 패턴
 
 ```sql
@@ -263,7 +292,7 @@ create index on cs_questions (category);
 create table quiz_sessions (
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null references auth.users(id),
-  category text not null,
+  category text not null check (category in ('network','database','os','data-structure','ai-llm','frontend','mixed')),
   total_count integer not null,
   correct_count integer not null,
   created_at timestamptz not null default now()
@@ -275,19 +304,23 @@ create index on quiz_sessions (user_id, created_at desc);
 
 ## 7. user_answers (오답노트용 개별 답안)
 
-퀴즈 세션 내 각 문제에 대한 사용자의 선택/정오답 기록. 오답노트 조회는 `is_correct = false`로 필터링한다.
+퀴즈 세션 내 각 문제에 대한 사용자의 답안/정오답 기록. 객관식은 `selected`/`is_correct`, 서술형은 `answer_text`+AI 채점 결과(`ai_score`/`ai_feedback`)를 사용하며 `is_correct`는 채점 기준(예: `ai_score >= 70`)으로 계산해 채운다. 오답노트 조회는 `is_correct = false`로 필터링한다.
 
 | 컬럼 | 타입 | Nullable | 기본값 | 설명 |
 |---|---|---|---|---|
 | id | uuid | NOT NULL | gen_random_uuid() | PK |
 | quiz_session_id | uuid | NOT NULL | | quiz_sessions 참조 |
 | question_id | uuid | NOT NULL | | cs_questions 참조 |
-| selected | integer | NOT NULL | | 사용자가 선택한 보기 인덱스 |
-| is_correct | boolean | NOT NULL | | 정답 여부 |
+| selected | integer | NULLABLE | | 객관식: 사용자가 선택한 보기 인덱스 |
+| answer_text | text | NULLABLE | | 서술형: 사용자가 제출한 답안 원문 |
+| ai_score | integer | NULLABLE | | 서술형: AI 채점 점수(0~100) |
+| ai_feedback | text | NULLABLE | | 서술형: AI 피드백 |
+| is_correct | boolean | NOT NULL | | 정답 여부(서술형은 ai_score 기준 계산값) |
 | created_at | timestamptz | NOT NULL | now() | |
 
 - **인덱스**: `INDEX (quiz_session_id)`, `INDEX (question_id, is_correct)` (오답노트 조회용)
 - **upsert 고유키**: 없음
+- **제약**: `ai_score`는 `CHECK (ai_score BETWEEN 0 AND 100)`
 - **RLS 정책 초안**: 직접 `user_id`가 없으므로 `quiz_sessions`와 조인해 소유권을 검증하는 정책 필요 (`EXISTS (SELECT 1 FROM quiz_sessions s WHERE s.id = quiz_session_id AND s.user_id = auth.uid())`)
 
 ```sql
@@ -296,7 +329,10 @@ create table user_answers (
   id uuid primary key default gen_random_uuid(),
   quiz_session_id uuid not null references quiz_sessions(id) on delete cascade,
   question_id uuid not null references cs_questions(id),
-  selected integer not null,
+  selected integer,
+  answer_text text,
+  ai_score integer check (ai_score between 0 and 100),
+  ai_feedback text,
   is_correct boolean not null,
   created_at timestamptz not null default now()
 );

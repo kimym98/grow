@@ -1,26 +1,27 @@
 import Link from "next/link"
-import type { CsQuestionFixture, QuizAnswerFixture } from "@app/shared"
+import type { CsQuestion, UserAnswer } from "@app/shared"
 
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { CATEGORY_LABELS } from "@/components/sections/quiz/quiz-category"
+import { CATEGORY_LABELS, MIXED_CATEGORY, MIXED_LABEL } from "@/components/sections/quiz/quiz-category"
 
 interface QuizResultSummaryProps {
-  category: CsQuestionFixture["category"]
-  questions: CsQuestionFixture[]
-  answers: QuizAnswerFixture[]
+  category: CsQuestion["category"] | typeof MIXED_CATEGORY
+  questions: CsQuestion[]
+  answers: UserAnswer[]
 }
 
 function QuizResultSummary({ category, questions, answers }: QuizResultSummaryProps) {
+  const categoryLabel = category === MIXED_CATEGORY ? MIXED_LABEL : CATEGORY_LABELS[category]
   const correctCount = answers.filter((answer) => answer.isCorrect).length
-  const accuracy = Math.round((correctCount / answers.length) * 100)
+  const accuracy = answers.length > 0 ? Math.round((correctCount / answers.length) * 100) : 0
   const wrongAnswers = answers.filter((answer) => !answer.isCorrect)
 
   return (
     <div className="flex flex-col gap-6 p-6">
       <div className="flex flex-col gap-2">
-        <Badge variant="outline">{CATEGORY_LABELS[category]}</Badge>
+        <Badge variant="outline">{categoryLabel}</Badge>
         <h1 className="text-2xl font-semibold">결과 요약</h1>
         <p className="text-sm text-muted-foreground">
           {answers.length}문제 중 {correctCount}문제 정답 · 정답률 {accuracy}%
@@ -42,13 +43,25 @@ function QuizResultSummary({ category, questions, answers }: QuizResultSummaryPr
                   <CardTitle className="text-sm">{question.question}</CardTitle>
                 </CardHeader>
                 <CardContent className="flex flex-col gap-1 text-sm">
-                  <p className="text-red-600 dark:text-red-400">
-                    선택한 답: {question.choices[answer.selected]}
-                  </p>
-                  <p className="text-green-600 dark:text-green-400">
-                    정답: {question.choices[question.correctIndex]}
-                  </p>
-                  <p className="text-muted-foreground">{question.answer}</p>
+                  {question.questionType === "multiple-choice" ? (
+                    <>
+                      <p className="text-red-600 dark:text-red-400">
+                        선택한 답: {answer.selected !== undefined ? question.choices[answer.selected] : "미응답"}
+                      </p>
+                      <p className="text-green-600 dark:text-green-400">
+                        정답: {question.choices[question.correctIndex]}
+                      </p>
+                    </>
+                  ) : (
+                    <>
+                      <p className="text-muted-foreground">제출한 답변: {answer.answerText}</p>
+                      {typeof answer.aiScore === "number" && (
+                        <p className="text-red-600 dark:text-red-400">AI 채점 점수: {answer.aiScore}점</p>
+                      )}
+                      {answer.aiFeedback && <p className="text-muted-foreground">AI 피드백: {answer.aiFeedback}</p>}
+                    </>
+                  )}
+                  <p className="text-muted-foreground">모범 답안: {question.answer}</p>
                 </CardContent>
               </Card>
             )

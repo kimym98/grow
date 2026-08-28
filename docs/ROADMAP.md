@@ -162,19 +162,24 @@ AI 취업 비서는 IT 직군 취업 준비생을 위한 노션형 올인원 데
   - ✅ 검증: `supabase functions serve` 로컬 테스트(파싱 로직은 raw 피드로 Node 독립 검증 후 실제 upsert까지 확인) → 배포 → pg_cron 등록. Playwright MCP로 로그아웃 → 테스트 계정 로그인 → 뉴스 피드 로딩(139건) → 북마크 토글 E2E 테스트, Supabase SQL로 북마크 생성/삭제 및 새로고침 후 상태 유지 실제 반영 확인
   - See: /docs/news-source-research.md
 
-- **Task 013: PDF 첨삭 파이프라인 및 LLM Provider 구현**
-  - Supabase Storage 업로드(용량/확장자 검증) 및 서명 URL 처리
-  - pdf-parse/unpdf 텍스트 추출 → 문서 유형별 프롬프트 템플릿 적용
-  - `LlmProvider` 인터페이스 구현체(OpenAI) 및 교체 가능 구조, 재시도/타임아웃/비용 가드
-  - 첨삭 결과 저장 및 버전 관리, diff/코멘트 렌더링 실데이터 연결
-  - 검증: 실제 샘플 PDF로 업로드→추출→LLM 응답 수동 테스트, Playwright MCP로 업로드~결과 표시 E2E 테스트
+- ✅ **Task 013: PDF 첨삭 파이프라인 및 LLM Provider 구현**
+  - ✅ Edge Function 사용자 JWT 인증 방식 및 PDF 추출 라이브러리(unpdf, pdf-parse는 Node 전용이라 부적합) Deno 호환성 조사
+  - ✅ `user_llm_keys` 테이블 및 Supabase Vault 연동(평문 키는 SELECT로 노출되지 않도록 뷰/SECURITY DEFINER 함수로 secret_id만 반환)
+  - ✅ Supabase Storage `documents` 비공개 버킷(10MiB, PDF 전용) 설정 및 클라이언트 확장자/용량 Zod 검증
+  - ✅ `LlmProvider` 구현체(Gemini/Anthropic) 및 팩토리 함수, 문서 유형(자소서/포트폴리오)별 프롬프트 템플릿
+  - ✅ `review-document` Edge Function: 사용자 JWT 인증 + PDF 추출 + 키 복호화 + LLM 호출 + 결과 저장(status pending→processing→completed/failed)
+  - ✅ LLM API 키 등록/관리 설정 화면(마스킹 조회), PDF 업로드~첨삭 결과 화면 실데이터 연결 및 키 미등록 차단 UX
+  - ✅ 검증: 실제 샘플 PDF로 키 등록→업로드→추출→LLM 응답→결과 표시 수동 테스트, Playwright MCP로 정상 플로우/에러 플로우(키 미등록) E2E 테스트 통과
+  - See: /docs/pdf-review-research.md
 
-- **Task 014: CS 면접 퀴즈 문제 뱅크 및 풀이 로직 구현**
-  - 카테고리별(네트워크/DB/OS/자료구조) 초기 문제 뱅크 시딩
-  - 랜덤 출제 로직, `quiz_sessions`/`user_answers` 기록, 채점 및 결과 요약
-  - 오답노트 조회/복습 플로우 구현
-  - 선택적 LLM 꼬리질문/해설 생성(Provider 재사용, 기능 플래그로 on/off)
-  - Playwright MCP로 세션 시작→풀이→채점→오답노트 E2E 테스트
+- ✅ **Task 014: CS 면접 퀴즈 문제 뱅크 및 풀이 로직 구현**
+  - ✅ `cs_questions`에 `question_type`(multiple-choice/short-answer) 컬럼 추가, 카테고리에 `ai-llm`/`frontend` 추가(기존 4개 포함 총 6개), `quiz_sessions`/`user_answers`는 모의고사(`mixed`) 및 서술형(`answer_text`/`ai_score`/`ai_feedback`) 지원으로 확장(하위호환 유지)
+  - ✅ `grade-short-answer` Edge Function 신설: `review-document`와 동일한 사용자 JWT 인증 + `user_llm_keys` 개인 키 복호화 패턴으로 서술형 답안을 AI가 0~100점+피드백으로 채점
+  - ✅ `get_random_quiz_questions(p_count, p_category)` RPC로 카테고리별/전체(모의고사) 무작위 출제 구현
+  - ✅ 퀴즈 UI 전체를 더미 fixture에서 실제 Supabase 데이터로 완전 전환(문제 조회, 세션 생성/기록, 결과 요약, 오답노트, 세션 목록) — `packages/shared/src/mocks/quiz.ts` 등 미사용 더미 코드 제거
+  - ✅ 카테고리당 20문항(객관식 14+서술형 6) × 6개 카테고리 = 총 120문항 시딩(WebSearch로 최신 면접 질문 주제 조사 후 AI가 직접 작성)
+  - ✅ 검증: Playwright MCP로 객관식 완주(정답/오답 반영, DB 집계 일치)·오답노트·세션 목록·모의고사 무작위 출제(전체 풀 대상)·서술형 렌더링 및 API 키 미등록 에러 처리 E2E 확인. 단, 실제 LLM API 키가 이 환경에 없어 서술형 AI 채점의 성공 케이스(및 이를 포함하는 모의고사 20문 전체 완주)는 end-to-end로 검증하지 못함 — 결과 화면의 서술형 피드백 렌더링 자체는 채점 결과를 직접 삽입해 별도 검증함
+  - See: /docs/database-schema.md
 
 - **Task 014-1: 핵심 기능 통합 테스트**
   - Playwright MCP로 전체 사용자 플로우 통합 테스트(로그인 → 공고 탐색 → 일정 추가 → 뉴스 → 문서 첨삭 → 퀴즈)
@@ -200,3 +205,8 @@ AI 취업 비서는 IT 직군 취업 준비생을 위한 노션형 올인원 데
   - 공통 로직(Supabase 클라이언트, 타입, Zod 스키마, 알림 트리거 판단) `packages/shared` 이관 완결
   - `apps/mobile` React Native/Expo 초기 셋업 및 인증/공고 조회 최소 플로우 구현
   - 알림 발송 계층만 플랫폼별 분리(Electron Notification vs. 모바일 Push) 검증
+
+---
+
+**📅 최종 업데이트**: 2026-08-28
+**📊 진행 상황**: Phase 3 진행 중 (13/17 Tasks 완료)

@@ -1,23 +1,19 @@
 "use client"
 
 import Link from "next/link"
-import type { QuizSessionFixture } from "@app/shared"
+import type { QuizSession } from "@app/shared"
 
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent } from "@/components/ui/card"
 import { EmptyState } from "@/components/common/empty-state"
-import { CATEGORY_LABELS } from "@/components/sections/quiz/quiz-category"
+import { CATEGORY_LABELS, MIXED_CATEGORY, MIXED_LABEL } from "@/components/sections/quiz/quiz-category"
 
 interface QuizSessionListProps {
-  sessions: QuizSessionFixture[]
+  sessions: QuizSession[]
+  wrongAnswerCount: number
 }
 
-function QuizSessionList({ sessions }: QuizSessionListProps) {
-  const wrongAnswerCount = sessions.reduce(
-    (count, session) => count + session.answers.filter((answer) => !answer.isCorrect).length,
-    0
-  )
-
+function QuizSessionList({ sessions, wrongAnswerCount }: QuizSessionListProps) {
   return (
     <div className="flex flex-col gap-3">
       <div className="flex items-center justify-between">
@@ -30,7 +26,9 @@ function QuizSessionList({ sessions }: QuizSessionListProps) {
       ) : (
         <ul className="flex flex-col gap-2">
           {sessions.map((session) => {
-            const accuracy = Math.round((session.correctCount / session.totalCount) * 100)
+            const accuracy =
+              session.totalCount > 0 ? Math.round((session.correctCount / session.totalCount) * 100) : 0
+            const categoryLabel = session.category === MIXED_CATEGORY ? MIXED_LABEL : CATEGORY_LABELS[session.category]
 
             return (
               <li key={session.id}>
@@ -38,8 +36,8 @@ function QuizSessionList({ sessions }: QuizSessionListProps) {
                   <Card className="transition-colors hover:bg-muted focus-visible:bg-muted">
                     <CardContent className="flex items-center justify-between">
                       <div>
-                        <p className="text-sm font-medium">{CATEGORY_LABELS[session.category]}</p>
-                        <p className="text-xs text-muted-foreground">{session.createdAt}</p>
+                        <p className="text-sm font-medium">{categoryLabel}</p>
+                        <p className="text-xs text-muted-foreground">{session.createdAt.slice(0, 10)}</p>
                       </div>
                       <div className="flex items-center gap-2">
                         <Badge variant={accuracy >= 60 ? "default" : "destructive"}>정답률 {accuracy}%</Badge>
