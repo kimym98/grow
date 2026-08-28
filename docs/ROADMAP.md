@@ -206,10 +206,11 @@ AI 취업 비서는 IT 직군 취업 준비생을 위한 노션형 올인원 데
   - 단위/E2E 테스트 코드 정비, CI 파이프라인(lint/build/test) 및 Electron 패키징·배포(코드 서명 포함)
   - 로깅/에러 추적(Sentry 등), Edge Function 실행 모니터링 및 알림
 
-- **Task 017: 모바일 확장 준비 (후순위)**
-  - 공통 로직(Supabase 클라이언트, 타입, Zod 스키마, 알림 트리거 판단) `packages/shared` 이관 완결
-  - `apps/mobile` React Native/Expo 초기 셋업 및 인증/공고 조회 최소 플로우 구현
-  - 알림 발송 계층만 플랫폼별 분리(Electron Notification vs. 모바일 Push) 검증
+- **Task 017: Electron 프로덕션 빌드 정적 export 정합성 확보**
+  - Task 016 릴리스 CI 작업 중 발견: `electron/main.ts`가 프로덕션에서 `file://.../out/index.html`을 로드하는데, `next.config.ts`에 `output: "export"`가 없어 `next build`가 `out/`을 아예 생성하지 않아 패키징된 앱이 빈 화면으로 뜨는 상태
+  - `output: "export"`를 켜면 `/jobs/[id]`, `/documents/[id]`, `/quiz/[sessionId]`가 서버 컴포넌트(요청 시점 Supabase 조회 포함)라 `generateStaticParams()` 누락으로 빌드 자체가 실패함을 실측 확인 — 세 라우트를 클라이언트 컴포넌트로 전환(데이터 조회를 클라이언트로 이동)해야 함
+  - 전환 후 실제 `out/` 산출물 생성 및 Electron이 `file://` 프로토콜로 정상 로드하는지 재검증
+  - Task 016-5(릴리스 CI 워크플로)에서 미완료로 남긴 "로컬 `electron-builder` 패키징 성공" 검증을 여기서 마무리 (이 환경은 Windows 개발자 모드 미설정으로 `winCodeSign` 심볼릭 링크 추출이 막혀 있어, 검증 전 `CSC_IDENTITY_AUTO_DISCOVERY=false` 설정 또는 개발자 모드 활성화가 선행되어야 함)
 
 ---
 
