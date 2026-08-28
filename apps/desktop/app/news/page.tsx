@@ -2,7 +2,7 @@ import { NewsFeed } from "@/components/sections/news/news-feed"
 
 export default function NewsPage() {
   return (
-    <div>
+    <div className="flex h-full flex-col">
       <div className="px-6 pt-6">
         <h1 className="text-2xl font-semibold">뉴스</h1>
         <p className="mt-2 text-muted-foreground">

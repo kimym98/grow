@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import Link from "next/link"
+import dynamic from "next/dynamic"
 import { Plus, TriangleAlert } from "lucide-react"
 import { toast } from "sonner"
 import type { DocumentReview } from "@app/shared"
@@ -17,9 +18,22 @@ import { Dialog } from "@/components/ui/dialog"
 import { EmptyState } from "@/components/common/empty-state"
 import { LoadingState } from "@/components/common/loading-state"
 import { ListDetailPanel } from "@/components/common/list-detail-panel"
-import { DocumentDetailContent } from "@/components/sections/documents/document-detail-content"
 import { DocumentStatusBadge } from "@/components/sections/documents/document-status-badge"
-import { DocumentUploadDropzone } from "@/components/sections/documents/document-upload-dropzone"
+
+// 상세/업로드 다이얼로그는 선택·오픈 시점에만 필요하므로 별도 청크로 분리한다
+const DocumentDetailContent = dynamic(
+  () =>
+    import("@/components/sections/documents/document-detail-content").then(
+      (mod) => mod.DocumentDetailContent
+    ),
+  { loading: () => <LoadingState variant="detail" /> }
+)
+const DocumentUploadDropzone = dynamic(
+  () =>
+    import("@/components/sections/documents/document-upload-dropzone").then(
+      (mod) => mod.DocumentUploadDropzone
+    )
+)
 
 const POLL_INTERVAL_MS = 4000
 

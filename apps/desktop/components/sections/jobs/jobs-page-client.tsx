@@ -1,17 +1,56 @@
 "use client"
 
 import { useEffect, useMemo, useState } from "react"
+import dynamic from "next/dynamic"
+import { List, type RowComponentProps } from "react-window"
 import type { JobPosting } from "@app/shared"
 
 import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
 import { EmptyState } from "@/components/common/empty-state"
+import { LoadingState } from "@/components/common/loading-state"
 import { ListDetailPanel } from "@/components/common/list-detail-panel"
 import { JobFilters, type JobSortOption } from "@/components/sections/jobs/job-filters"
-import { JobDetailContent } from "@/components/sections/jobs/job-detail-content"
 import { fetchJobPostings } from "@/lib/job-postings"
 
-const PAGE_SIZE = 6
+// 목록 화면 초기 로딩에는 필요 없는 상세 패널이므로 선택 시점에만 별도 청크로 불러온다
+const JobDetailContent = dynamic(
+  () => import("@/components/sections/jobs/job-detail-content").then((mod) => mod.JobDetailContent),
+  { loading: () => <LoadingState variant="detail" /> }
+)
+
+const JOB_ROW_HEIGHT = 108
+
+interface JobRowProps {
+  jobs: JobPosting[]
+  selectedJobId: string | null
+  onSelect: (jobId: string) => void
+}
+
+function JobRow({ index, style, jobs, selectedJobId, onSelect }: RowComponentProps<JobRowProps>) {
+  const job = jobs[index]
+
+  return (
+    <div style={style} className="px-3 pb-2">
+      <button
+        type="button"
+        onClick={() => onSelect(job.id)}
+        aria-current={job.id === selectedJobId}
+        data-current={job.id === selectedJobId}
+        className="flex w-full flex-col gap-1.5 rounded-xl bg-card p-3 text-left text-sm text-card-foreground ring-1 ring-foreground/10 transition-colors hover:bg-muted focus-visible:bg-muted focus-visible:outline-none focus-visible:ring-ring/50 data-[current=true]:bg-muted"
+      >
+        <p className="text-sm font-medium">{job.title}</p>
+        <p className="text-xs text-muted-foreground">
+          {job.company} · {job.location}
+        </p>
+        <div className="flex flex-wrap gap-1">
+          <Badge variant="outline">{job.source}</Badge>
+          <Badge variant="outline">{job.careerLevel}</Badge>
+          <Badge variant="secondary">{job.deadline ? `${job.deadline} 마감` : "상시채용"}</Badge>
+        </div>
+      </button>
+    </div>
+  )
+}
 
 function JobsPageClient() {
   const [allJobs, setAllJobs] = useState<JobPosting[]>([])
@@ -22,7 +61,6 @@ function JobsPageClient() {
   const [location, setLocation] = useState("all")
   const [careerLevel, setCareerLevel] = useState("all")
   const [sort, setSort] = useState<JobSortOption>("deadline")
-  const [visibleCount, setVisibleCount] = useState(PAGE_SIZE)
   const [selectedJobId, setSelectedJobId] = useState<string | null>(null)
 
   useEffect(() => {
@@ -79,7 +117,6 @@ function JobsPageClient() {
     })
   }, [allJobs, search, location, careerLevel, sort])
 
-  const visibleJobs = filteredJobs.slice(0, visibleCount)
   const selectedJob = allJobs.find((job) => job.id === selectedJobId) ?? null
 
   function handleSelectJob(jobId: string) {
@@ -89,7 +126,6 @@ function JobsPageClient() {
   function handleFilterChange<T>(setter: (value: T) => void) {
     return (value: T) => {
       setter(value)
-      setVisibleCount(PAGE_SIZE)
     }
   }
 
@@ -114,48 +150,21 @@ function JobsPageClient() {
           />
 
           {isLoading ? (
-            <EmptyState title="채용 공고를 불러오는 중입니다" description="잠시만 기다려주세요" />
+            <LoadingState variant="list" count={4} />
           ) : loadError ? (
             <EmptyState title="채용 공고를 불러오지 못했습니다" description={loadError} />
-          ) : visibleJobs.length === 0 ? (
+          ) : filteredJobs.length === 0 ? (
             <EmptyState title="조건에 맞는 공고가 없습니다" description="검색어나 필터를 변경해보세요" />
           ) : (
-            <ul className="flex flex-col gap-2 p-3">
-              {visibleJobs.map((job) => (
-                <li key={job.id}>
-                  <button
-                    type="button"
-                    onClick={() => handleSelectJob(job.id)}
-                    aria-current={job.id === selectedJobId}
-                    data-current={job.id === selectedJobId}
-                    className="flex w-full flex-col gap-1.5 rounded-xl bg-card p-3 text-left text-sm text-card-foreground ring-1 ring-foreground/10 transition-colors hover:bg-muted focus-visible:bg-muted focus-visible:outline-none focus-visible:ring-ring/50 data-[current=true]:bg-muted"
-                  >
-                    <p className="text-sm font-medium">{job.title}</p>
-                    <p className="text-xs text-muted-foreground">
-                      {job.company} · {job.location}
-                    </p>
-                    <div className="flex flex-wrap gap-1">
-                      <Badge variant="outline">{job.source}</Badge>
-                      <Badge variant="outline">{job.careerLevel}</Badge>
-                      <Badge variant="secondary">{job.deadline ? `${job.deadline} 마감` : "상시채용"}</Badge>
-                    </div>
-                  </button>
-                </li>
-              ))}
-            </ul>
-          )}
-
-          {visibleCount < filteredJobs.length ? (
-            <div className="flex justify-center p-3">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setVisibleCount((count) => count + PAGE_SIZE)}
-              >
-                더 보기
-              </Button>
+            <div className="min-h-0 flex-1">
+              <List
+                rowComponent={JobRow}
+                rowCount={filteredJobs.length}
+                rowHeight={JOB_ROW_HEIGHT}
+                rowProps={{ jobs: filteredJobs, selectedJobId, onSelect: handleSelectJob }}
+              />
             </div>
-          ) : null}
+          )}
         </div>
       }
       detail={

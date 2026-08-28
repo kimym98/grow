@@ -2,13 +2,21 @@
 
 import { useEffect, useState } from "react"
 import { useSearchParams } from "next/navigation"
+import dynamic from "next/dynamic"
 import { toast } from "sonner"
 import type { CsQuestion } from "@app/shared"
 
 import { useRecentFavoritesStore } from "@/lib/stores/recent-favorites-store"
-import { QuizPlayView, type QuestionResponse, type QuestionGradeResult } from "@/components/sections/quiz/quiz-play-view"
-import { QuizResultSummary } from "@/components/sections/quiz/quiz-result-summary"
+import type { QuestionResponse, QuestionGradeResult } from "@/components/sections/quiz/quiz-play-view"
 import { MIXED_CATEGORY, MOCK_EXAM_QUESTION_COUNT } from "@/components/sections/quiz/quiz-category"
+
+// 진행 화면/결과 화면은 동시에 보이지 않으므로 각각 별도 청크로 분리한다
+const QuizPlayView = dynamic(() =>
+  import("@/components/sections/quiz/quiz-play-view").then((mod) => mod.QuizPlayView)
+)
+const QuizResultSummary = dynamic(() =>
+  import("@/components/sections/quiz/quiz-result-summary").then((mod) => mod.QuizResultSummary)
+)
 import { fetchLlmKeyStatuses } from "@/lib/llm-keys"
 import {
   completeQuizSession,
