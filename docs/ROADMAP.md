@@ -181,11 +181,13 @@ AI 취업 비서는 IT 직군 취업 준비생을 위한 노션형 올인원 데
   - ✅ 검증: Playwright MCP로 객관식 완주(정답/오답 반영, DB 집계 일치)·오답노트·세션 목록·모의고사 무작위 출제(전체 풀 대상)·서술형 렌더링 및 API 키 미등록 에러 처리 E2E 확인. 단, 실제 LLM API 키가 이 환경에 없어 서술형 AI 채점의 성공 케이스(및 이를 포함하는 모의고사 20문 전체 완주)는 end-to-end로 검증하지 못함 — 결과 화면의 서술형 피드백 렌더링 자체는 채점 결과를 직접 삽입해 별도 검증함
   - See: /docs/database-schema.md
 
-- **Task 014-1: 핵심 기능 통합 테스트**
-  - Playwright MCP로 전체 사용자 플로우 통합 테스트(로그인 → 공고 탐색 → 일정 추가 → 뉴스 → 문서 첨삭 → 퀴즈)
-  - API 연동·비즈니스 로직 검증, RLS 권한 경계 테스트
-  - 에러 핸들링 및 엣지 케이스(네트워크 오류, Edge Function 실패, LLM 타임아웃, 대용량 PDF, 빈 데이터)
-  - Electron 앱 실행 기준 회귀 시나리오 체크리스트 정리
+- ✅ **Task 014-1: 핵심 기능 통합 테스트**
+  - ✅ Playwright MCP로 로그인(테스트 계정) → 공고 탐색 → 일정 추가 → 뉴스 → 문서 첨삭 → 퀴즈로 이어지는 전체 사용자 플로우를 통합 테스트하고, 각 단계를 Supabase SQL로 실제 DB 반영과 교차검증(일정 생성/삭제, 뉴스 북마크 추가/해제, 퀴즈 세션/답안 집계 일치)
+  - ✅ RLS 권한 경계 검증: `schedules`/`document_reviews`/`quiz_sessions`/`user_answers`/`user_llm_keys` 전체 정책을 `pg_policies`로 전수 조회해 `auth.uid() = user_id` 기반임을 확인. 이 과정에서 `user_answers`에 UPDATE 정책이 없어 답안 재제출(upsert) 시 실제 403 RLS 오류가 발생하는 갭을 발견 및 재현 후 `user_answers_owner_update` 마이그레이션으로 수정
+  - ✅ 에러 핸들링·엣지 케이스 검증: `window.fetch` 오버라이드로 네트워크 오류 시뮬레이션(뉴스 피드 에러 UI 정상 노출 확인), Edge Function 방어 응답(인증 없음 401, 빈 body/잘못된 provider 400) 확인, 10MiB 초과 PDF의 `documentFileSchema`(Zod) 차단 로직 검증, LLM 키 미등록 시 문서 첨삭·서술형 채점 모두 Edge Function 호출 전 클라이언트에서 차단됨을 확인
+  - ✅ 버그 수정 2건: (1) 헤더 `UserProfile`이 실제 로그인 사용자 대신 하드코딩된 목업(`김민영`)을 표시하던 문제를 `useAuth()` 세션 기반으로 수정 (2) 퀴즈 `RadioGroup`이 문항마다 controlled/uncontrolled를 오가며 제출 버튼이 비활성 상태로 고착되던 버그를 `value` 기본값을 빈 문자열로 통일해 수정
+  - ✅ Electron 앱 실행 기준 회귀 시나리오 체크리스트 작성. 실제 OS 알림 발송과 LLM 호출 성공 케이스(로컬 테스트 계정에 실키 미등록)는 이전 Task들과 동일한 사유로 자동 검증 범위 밖임을 명시
+  - See: /docs/regression-checklist.md
 
 ### Phase 4: 고급 기능 및 최적화
 
@@ -209,4 +211,4 @@ AI 취업 비서는 IT 직군 취업 준비생을 위한 노션형 올인원 데
 ---
 
 **📅 최종 업데이트**: 2026-08-28
-**📊 진행 상황**: Phase 3 진행 중 (13/17 Tasks 완료)
+**📊 진행 상황**: Phase 3 완료 (14/17 Tasks 완료)
