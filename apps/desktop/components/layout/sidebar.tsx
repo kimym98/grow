@@ -1,5 +1,6 @@
 "use client"
 
+import Image from "next/image"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { NAV_ITEMS, SITE_CONFIG } from "@/lib/constants"
@@ -13,7 +14,21 @@ export function Sidebar() {
   return (
     <aside className="hidden md:flex w-60 shrink-0 flex-col border-r border-border/40 bg-background">
       <div className="flex h-16 items-center justify-between px-4">
-        <Link href="/" className="font-bold text-lg">
+        <Link href="/" className="flex items-center gap-2 font-bold text-lg">
+          <Image
+            src="/logo/grow-mark.svg"
+            alt=""
+            width={24}
+            height={24}
+            className="dark:hidden"
+          />
+          <Image
+            src="/logo/grow-mark-on-dark.svg"
+            alt=""
+            width={24}
+            height={24}
+            className="hidden dark:block"
+          />
           {SITE_CONFIG.name}
         </Link>
         <ThemeToggle />
