@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 104 104" width="104" height="104">
+  <g id="grow-mark-dark">
+    <rect x="48" y="38" width="8" height="58" rx="4" fill="#5FD1C7"></rect>
+    <path d="M75,10 L94,10 A4,4 0 0 1 98,14 L98,33 A23,23 0 0 1 75,56 A23,23 0 0 1 52,33 A23,23 0 0 1 75,10 Z" fill="#4ADE80"></path>
+    <path d="M12,34 L25,34 A17,17 0 0 1 42,51 A17,17 0 0 1 25,68 A17,17 0 0 1 8,51 L8,38 A4,4 0 0 1 12,34 Z" fill="#2F9A66"></path>
+  </g>
+</svg>
