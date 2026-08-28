@@ -1,4 +1,3 @@
-import { init as initSentryMain } from "@sentry/electron/main";
 import { app, BrowserWindow, ipcMain, Notification, Tray, Menu, nativeImage } from "electron";
 import path from "path";
 import nodeSchedule from "node-schedule";
@@ -15,12 +14,14 @@ const AUTH_PROTOCOL = "grow";
 /**
  * SENTRY_DSN이 설정된 경우에만 크래시/에러 수집을 초기화한다. 이 환경(및 대부분의 배포 초기 단계)에는
  * DSN이 발급되어 있지 않으므로 미설정 시 완전히 no-op으로 동작해야 하며, 어떤 예외도 앱 시작을 막으면 안 된다.
- * 가능한 한 이른 시점(다른 초기화보다 먼저)에 호출해야 크래시까지 캡처할 수 있다.
+ * @sentry/electron/main은 DSN이 있을 때만 require한다 — 정적으로 import하면 모노레포 hoisting 구조상
+ * 패키징에서 누락되기 쉬운 전이 의존성(@sentry/browser-utils)까지 항상 로드를 시도해 크래시 위험이 생긴다.
  */
 function initSentryIfConfigured() {
   if (!process.env.SENTRY_DSN) return;
 
   try {
+    const { init: initSentryMain } = require("@sentry/electron/main");
     initSentryMain({ dsn: process.env.SENTRY_DSN });
   } catch (error) {
     console.error("[sentry] 초기화 실패(앱 실행에는 영향 없음):", error);
@@ -236,7 +237,7 @@ function createWindow() {
   win.loadURL(
     process.env.NODE_ENV === "development"
       ? devUrl
-      : `file://${path.join(__dirname, "../out/index.html")}`
+      : `file://${path.join(__dirname, "../../out/index.html")}`
   );
 }
 
