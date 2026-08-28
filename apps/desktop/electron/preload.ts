@@ -1,8 +1,14 @@
 import { contextBridge, ipcRenderer } from "electron";
 
-// Sentry가 main<->renderer IPC 채널을 구성한다. main에서 SENTRY_DSN 미설정으로 초기화를 건너뛰었어도
-// 이 브리지 등록 자체는 부작용이 없어(단순 IPC 채널 등록) 항상 불러와도 안전하다
-import "@sentry/electron/preload";
+// Sentry가 main<->renderer IPC 채널을 구성한다. 정적으로 import하면 전이 의존성(@sentry/browser-utils)이
+// 모노레포 hoisting 구조상 패키징에서 누락됐을 때 preload 스크립트 전체가 로드에 실패해
+// contextBridge 등록조차 안 되는 심각한 실패 모드가 생긴다. SENTRY_DSN 미설정 시에는 애초에
+// 필요 없으므로, 실패해도 무시 가능하도록 감싸서 로드한다.
+try {
+  require("@sentry/electron/preload");
+} catch (error) {
+  console.error("[sentry] preload 브리지 로드 실패(무시 가능):", error);
+}
 
 contextBridge.exposeInMainWorld("electronAPI", {
   ping: () => "pong",

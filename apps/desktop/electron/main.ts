@@ -1,5 +1,15 @@
-import { app, BrowserWindow, ipcMain, Notification, Tray, Menu, nativeImage } from "electron";
+import {
+  app,
+  BrowserWindow,
+  ipcMain,
+  Notification,
+  Tray,
+  Menu,
+  nativeImage,
+  protocol,
+} from "electron";
 import path from "path";
+import { readFile } from "fs/promises";
 import nodeSchedule from "node-schedule";
 import { autoUpdater } from "electron-updater";
 
@@ -10,6 +20,18 @@ import {
 } from "./notification-trigger";
 
 const AUTH_PROTOCOL = "grow";
+// Next.js 정적 export 산출물을 file://로 직접 열면, 클라이언트 라우팅이 절대경로("/login" 등)를
+// 브라우저 네비게이션으로 폴백할 때 그 경로가 "도메인 루트"가 아니라 "드라이브 루트"(file:///C:/login/)로
+// 해석되어 ERR_FILE_NOT_FOUND가 발생한다. 커스텀 프로토콜로 서빙하면 "app://app"이 정식 origin이 되어
+// 절대경로가 앱 루트 기준으로 정상 해석된다. registerSchemesAsPrivileged는 app이 ready 되기 전에
+// 호출해야 하므로 모듈 최상단에서 실행한다.
+const APP_PROTOCOL = "app";
+protocol.registerSchemesAsPrivileged([
+  {
+    scheme: APP_PROTOCOL,
+    privileges: { standard: true, secure: true, supportFetchAPI: true, corsEnabled: true },
+  },
+]);
 
 /**
  * SENTRY_DSN이 설정된 경우에만 크래시/에러 수집을 초기화한다. 이 환경(및 대부분의 배포 초기 단계)에는
@@ -235,10 +257,47 @@ function createWindow() {
 
   const devUrl = "http://localhost:3000";
   win.loadURL(
-    process.env.NODE_ENV === "development"
-      ? devUrl
-      : `file://${path.join(__dirname, "../../out/index.html")}`
+    process.env.NODE_ENV === "development" ? devUrl : `${APP_PROTOCOL}://app/`
   );
+}
+
+/**
+ * 정적 export 산출물(out/)을 app:// 커스텀 프로토콜로 서빙한다. file://로 직접 열면 클라이언트
+ * 라우팅의 절대경로가 드라이브 루트로 잘못 해석되는 문제가 있어(위 registerSchemesAsPrivileged 주석 참고),
+ * 정식 origin을 갖는 커스텀 프로토콜을 통해 서빙해 절대경로가 앱 루트 기준으로 해석되게 한다.
+ */
+const MIME_TYPES: Record<string, string> = {
+  ".html": "text/html",
+  ".js": "text/javascript",
+  ".css": "text/css",
+  ".json": "application/json",
+  ".txt": "text/plain",
+  ".svg": "image/svg+xml",
+  ".png": "image/png",
+  ".jpg": "image/jpeg",
+  ".ico": "image/x-icon",
+  ".woff": "font/woff",
+  ".woff2": "font/woff2",
+};
+
+function registerAppProtocol() {
+  protocol.handle(APP_PROTOCOL, async (request) => {
+    const url = new URL(request.url);
+    let pathname = decodeURIComponent(url.pathname);
+    if (pathname === "" || pathname.endsWith("/")) {
+      pathname += "index.html";
+    }
+    // out/ 산출물은 app.asar 안에 있어 일반 file:// 요청(net.fetch)으로는 asar 가상 경로를
+    // 읽을 수 없다. asar를 투명하게 처리하는 Node의 fs로 직접 읽어 Response를 만들어 반환한다.
+    const filePath = path.join(__dirname, "../../out", pathname);
+    try {
+      const data = await readFile(filePath);
+      const contentType = MIME_TYPES[path.extname(filePath)] ?? "application/octet-stream";
+      return new Response(data, { headers: { "content-type": contentType } });
+    } catch {
+      return new Response("Not Found", { status: 404 });
+    }
+  });
 }
 
 // grow:// 딥링크로 Supabase OAuth 콜백을 수신하기 위한 기본 프로토콜 핸들러 등록
@@ -268,6 +327,7 @@ if (!gotSingleInstanceLock) {
   });
 
   app.whenReady().then(() => {
+    registerAppProtocol();
     createWindow();
     registerNotificationHandlers();
     registerCollectionNotificationHandlers();
