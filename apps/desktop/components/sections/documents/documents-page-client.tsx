@@ -1,6 +1,7 @@
 "use client"
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
+import { useSearchParams } from "next/navigation"
 import Link from "next/link"
 import dynamic from "next/dynamic"
 import { Plus, TriangleAlert } from "lucide-react"
@@ -37,16 +38,14 @@ const DocumentUploadDropzone = dynamic(
 
 const POLL_INTERVAL_MS = 4000
 
-interface DocumentsPageClientProps {
-  initialSelectedId?: string
-}
+function DocumentsPageClient() {
+  const searchParams = useSearchParams()
 
-function DocumentsPageClient({ initialSelectedId }: DocumentsPageClientProps) {
   const [documents, setDocuments] = useState<DocumentReview[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [availableProviders, setAvailableProviders] = useState<LlmProviderName[]>([])
-  const [selectedDocumentId, setSelectedDocumentId] = useState<string | null>(
-    initialSelectedId ?? null
+  const [selectedDocumentId, setSelectedDocumentId] = useState<string | null>(() =>
+    searchParams.get("id")
   )
   const [isUploadOpen, setIsUploadOpen] = useState(false)
   const pollTimerRef = useRef<ReturnType<typeof setInterval> | null>(null)
@@ -67,7 +66,7 @@ function DocumentsPageClient({ initialSelectedId }: DocumentsPageClientProps) {
       id: selectedDocument.id,
       title: selectedDocument.title,
       subtitle: selectedDocument.type === "resume" ? "자소서" : "포트폴리오",
-      href: `/documents/${selectedDocument.id}`,
+      href: `/documents?id=${selectedDocument.id}`,
     })
   }, [addRecent, selectedDocument])
 

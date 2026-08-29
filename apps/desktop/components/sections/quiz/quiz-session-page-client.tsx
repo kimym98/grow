@@ -57,7 +57,7 @@ function QuizSessionPageClient({ sessionId }: QuizSessionPageClientProps) {
       id: state.detail.session.id,
       title: `${QUIZ_CATEGORY_LABELS[state.detail.session.category]} 퀴즈 세션`,
       subtitle: `${state.detail.session.correctCount}/${state.detail.session.totalCount} 정답`,
-      href: `/quiz/${state.detail.session.id}`,
+      href: `/quiz?session=${state.detail.session.id}`,
     })
   }, [addRecent, state])
 

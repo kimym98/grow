@@ -28,7 +28,7 @@ function QuizCategorySelect() {
   function handleSelect(category: CsQuestion["category"] | typeof MIXED_CATEGORY) {
     // quiz_sessions.id는 uuid 컬럼이므로 접두사 없는 순수 uuid를 사용해야 세션 생성이 가능하다
     const sessionId = crypto.randomUUID()
-    router.push(`/quiz/${sessionId}?category=${category}`)
+    router.push(`/quiz?session=${sessionId}&category=${category}`)
   }
 
   return (

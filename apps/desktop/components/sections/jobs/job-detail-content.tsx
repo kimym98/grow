@@ -37,7 +37,7 @@ function JobDetailContent({ job }: JobDetailContentProps) {
       id: job.id,
       title: job.title,
       subtitle: job.company,
-      href: `/jobs/${job.id}`,
+      href: `/jobs?id=${job.id}`,
     })
   }, [addRecent, job.id, job.title, job.company])
 

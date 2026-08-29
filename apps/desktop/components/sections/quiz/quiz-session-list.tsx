@@ -32,7 +32,7 @@ function QuizSessionList({ sessions, wrongAnswerCount }: QuizSessionListProps) {
 
             return (
               <li key={session.id}>
-                <Link href={`/quiz/${session.id}`}>
+                <Link href={`/quiz?session=${session.id}`}>
                   <Card className="transition-colors hover:bg-muted focus-visible:bg-muted">
                     <CardContent className="flex items-center justify-between">
                       <div>

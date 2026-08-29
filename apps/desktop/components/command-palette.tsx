@@ -40,7 +40,7 @@ async function loadSearchItems(): Promise<RecentFavoriteItem[]> {
         id: job.id,
         title: job.title,
         subtitle: job.company,
-        href: `/jobs/${job.id}`,
+        href: `/jobs?id=${job.id}`,
       })
     ),
     ...techNews.map(
@@ -60,7 +60,7 @@ async function loadSearchItems(): Promise<RecentFavoriteItem[]> {
         id: doc.id,
         title: doc.title,
         subtitle: doc.type === "resume" ? "자소서" : "포트폴리오",
-        href: `/documents/${doc.id}`,
+        href: `/documents?id=${doc.id}`,
       })
     ),
     ...quizSessions.map(
@@ -70,7 +70,7 @@ async function loadSearchItems(): Promise<RecentFavoriteItem[]> {
         id: session.id,
         title: `${QUIZ_CATEGORY_LABELS[session.category] ?? session.category} 퀴즈 세션`,
         subtitle: `${session.correctCount}/${session.totalCount} 정답`,
-        href: `/quiz/${session.id}`,
+        href: `/quiz?session=${session.id}`,
       })
     ),
   ]

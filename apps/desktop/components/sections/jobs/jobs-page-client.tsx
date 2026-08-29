@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useMemo, useState } from "react"
+import { useSearchParams } from "next/navigation"
 import dynamic from "next/dynamic"
 import { List, type RowComponentProps } from "react-window"
 import type { JobPosting } from "@app/shared"
@@ -53,6 +54,8 @@ function JobRow({ index, style, jobs, selectedJobId, onSelect }: RowComponentPro
 }
 
 function JobsPageClient() {
+  const searchParams = useSearchParams()
+
   const [allJobs, setAllJobs] = useState<JobPosting[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [loadError, setLoadError] = useState<string | null>(null)
@@ -61,7 +64,7 @@ function JobsPageClient() {
   const [location, setLocation] = useState("all")
   const [careerLevel, setCareerLevel] = useState("all")
   const [sort, setSort] = useState<JobSortOption>("deadline")
-  const [selectedJobId, setSelectedJobId] = useState<string | null>(null)
+  const [selectedJobId, setSelectedJobId] = useState<string | null>(() => searchParams.get("id"))
 
   useEffect(() => {
     let cancelled = false
