@@ -13,9 +13,12 @@ export default (phase: string): NextConfig => {
 
   return {
     output: "export",
-    // Electron이 file://out/index.html을 직접 여는 SPA라 절대경로(/_next/...)로는
-    // 정적 자산을 찾지 못한다. 상대경로로 내보내도록 강제한다. (빌드/export 전용)
-    assetPrefix: "./",
+    // electron/main.ts가 out/을 app:// 커스텀 프로토콜(정식 origin)로 서빙하므로
+    // 절대경로(/_next/...)가 앱 루트 기준으로 정상 해석된다. 과거 file://로 직접 열던
+    // 시절 상대경로(assetPrefix: "./")로 강제했던 설정은 이제 필요 없을 뿐 아니라,
+    // trailingSlash와 결합해 /login/, /settings/ 같은 라우트별 페이지에서 "./_next/..."가
+    // 현재 디렉터리(/login/_next/...) 기준으로 잘못 해석되어 모든 자산이 404가 나는
+    // 원인이었다 — 절대경로를 쓰도록 되돌린다.
     trailingSlash: true,
   };
 };
