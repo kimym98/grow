@@ -23,7 +23,11 @@ interface AppShellProps {
 
 export function AppShell({ children }: AppShellProps) {
   const pathname = usePathname()
-  const isAuthRoute = pathname === "/login"
+  // 프로덕션 export는 trailingSlash: true라 pathname이 "/login/"처럼 슬래시로
+  // 끝난다. 정확히 비교하려면 끝 슬래시를 정규화해야 한다.
+  const normalizedPathname =
+    pathname.length > 1 ? pathname.replace(/\/$/, "") : pathname
+  const isAuthRoute = normalizedPathname === "/login"
   const { session } = useAuth()
 
   useEffect(() => {
