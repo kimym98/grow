@@ -7,6 +7,7 @@ import {
   Menu,
   nativeImage,
   protocol,
+  shell,
 } from "electron";
 import path from "path";
 import { readFile } from "fs/promises";
@@ -247,6 +248,24 @@ function createWindow() {
 
   win.on("closed", () => {
     mainWindow = null;
+  });
+
+  // Supabase OAuth(signInWithOAuth)는 브라우저 환경에서 window.location으로 인증 URL을
+  // 직접 네비게이션한다. 별도 처리가 없으면 앱 창 자체가 accounts.google.com으로 이동했다가
+  // grow:// 딥링크 콜백(앱이 서빙하지 않는 프로토콜)으로 리다이렉트되며 흰 화면으로 끝난다.
+  // app:// origin을 벗어나는 네비게이션/새 창 요청은 모두 OS 기본 브라우저로 열도록 가로챈다.
+  win.webContents.on("will-navigate", (event, url) => {
+    if (!url.startsWith(`${APP_PROTOCOL}://`)) {
+      event.preventDefault();
+      shell.openExternal(url);
+    }
+  });
+
+  win.webContents.setWindowOpenHandler(({ url }) => {
+    if (!url.startsWith(`${APP_PROTOCOL}://`)) {
+      shell.openExternal(url);
+    }
+    return { action: "deny" };
   });
 
   const devUrl = "http://localhost:3000";
