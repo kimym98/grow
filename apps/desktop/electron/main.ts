@@ -237,6 +237,7 @@ function createWindow() {
     width: 1280,
     height: 800,
     icon: APP_ICON_PATH,
+    autoHideMenuBar: true,
     webPreferences: {
       contextIsolation: true,
       nodeIntegration: false,
@@ -340,6 +341,9 @@ if (!gotSingleInstanceLock) {
   });
 
   app.whenReady().then(() => {
+    // 메뉴 표시줄(File/Edit/View/...) 자체를 제거한다. autoHideMenuBar만으로는
+    // Alt 키로 다시 나타날 수 있어 애플리케이션 메뉴를 완전히 비운다.
+    Menu.setApplicationMenu(null);
     registerAppProtocol();
     createWindow();
     registerNotificationHandlers();
