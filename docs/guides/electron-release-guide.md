@@ -23,12 +23,12 @@ npx electron-builder --win # NSIS 인스톨러 생성
 
 결과물은 `apps/desktop/dist/`에 생긴다.
 
-| 파일 | 용도 |
-| --- | --- |
-| `Grow Setup 0.1.0.exe` | 사용자에게 배포할 실제 설치 파일 |
-| `Grow Setup 0.1.0.exe.blockmap` | electron-updater가 증분 업데이트(변경분만 다운로드) 계산에 쓰는 파일 |
-| `latest.yml` | electron-updater가 "새 버전이 있는지" 판단할 때 읽는 버전 메타데이터 |
-| `win-unpacked/` | 압축 전 원본 폴더. 배포용이 아니라 디버깅용(설치 없이 `Grow.exe`를 바로 실행해볼 수 있음) |
+| 파일                            | 용도                                                                                      |
+| ------------------------------- | ----------------------------------------------------------------------------------------- |
+| `Grow Setup 0.1.0.exe`          | 사용자에게 배포할 실제 설치 파일                                                          |
+| `Grow Setup 0.1.0.exe.blockmap` | electron-updater가 증분 업데이트(변경분만 다운로드) 계산에 쓰는 파일                      |
+| `latest.yml`                    | electron-updater가 "새 버전이 있는지" 판단할 때 읽는 버전 메타데이터                      |
+| `win-unpacked/`                 | 압축 전 원본 폴더. 배포용이 아니라 디버깅용(설치 없이 `Grow.exe`를 바로 실행해볼 수 있음) |
 
 ### 로컬 패키징이 실패한다면 (Windows 전용 이슈)
 
@@ -62,8 +62,8 @@ GitHub 저장소 **Settings → Secrets and variables → Actions**에 다음 �
 #    커밋 후 main에 push
 
 # 2) v로 시작하는 태그를 붙여서 push
-git tag v0.1.1
-git push origin v0.1.1
+git tag v0.1.2
+git push origin v0.1.2
 ```
 
 태그가 push되면 GitHub Actions(`release.yml`)가 자동으로:
