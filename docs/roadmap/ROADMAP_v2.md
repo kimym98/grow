@@ -149,15 +149,17 @@
     - [x] 함수가 강제 종료된 레코드가 영구 `processing`으로 남지 않고 `failed`로 전환됨 (`db reset` 후 processing 레코드 seed → 워치독 SQL 수동 실행 → failed 전환 확인)
     - [x] 사용자 UI에 실패 상태와 재시도 경로가 노출됨 (실패 사유 텍스트 + 재시도 버튼 추가, lint/tsc 통과 — 위 예외 참고)
 
-- **Task 027: 프롬프트 해시 기반 캐시 자동 무효화**
+- **Task 027: 프롬프트 해시 기반 캐시 자동 무효화** - ✅ 완료 (2026-09-01)
   - PRD 참조: 2.12 / 우선순위: 중 / 선행 조건: **Task 025**
-  - `grade-short-answer/index.ts`, `review-document/index.ts`의 수동 `PROMPT_VERSION` 의존 제거
-  - 캐시 키 생성 시 프롬프트 템플릿 문자열 해시를 포함해 자동 무효화
-  - 동일 해시 원칙을 Task 031(기업 분석) 캐시 설계에 재사용할 수 있도록 공통 유틸로 분리
+  - `grade-short-answer/index.ts`, `review-document/index.ts`의 수동 `PROMPT_VERSION` 상수와 관련 주석을 완전히 제거
+  - `grade-short-answer/llm.ts`, `review-document/llm.ts`의 `buildXPrompt` 함수에서 사용자 입력이 보간되지 않는 고정 골격 문구를 각각 `export const GRADING_PROMPT_TEMPLATE`, `DOCUMENT_REVIEW_PROMPT_TEMPLATE`로 추출(플레이스홀더 치환 방식). 동적 입력(question, answerText, review.type, resume_question, originalText 등)은 기존처럼 cacheKey 문자열에 별도로 이어붙여 사용자/입력별 캐시 분리를 그대로 유지
+  - `_shared/llm-cache.ts`에 `hashPromptTemplate` 유틸 추가(기존 `sha256Hex`를 감싸는 얇은 named wrapper) — 두 함수의 cacheKey 생성부에서 재사용하며, Task 031(기업 분석) 캐시 설계에서도 그대로 재사용 가능
+  - `packages/shared/src/lib/llm/prompt-templates.ts`의 `buildDocumentReviewPrompt`와 리팩터링된 `review-document/llm.ts`의 최종 생성 문자열을 나란히 비교(diff)해 완전히 동일함을 확인 — Task 025에서 보류된 완전 단일 소스화는 이번에도 통합하지 않고 상호 참조 주석만 최신화
+  - **⚠️ 검증 범위 일부 제한**: Deno CLI가 로컬에 미설치되어(Task 025/026과 동일 제약) 실제 Deno 런타임에서의 end-to-end 검증은 미수행. `hashPromptTemplate`/`sha256Hex`는 Web Crypto API(`crypto.subtle`) 기반으로 Node에서도 동일하게 동작하므로, scratchpad의 임시 Node 스크립트(검증 후 삭제, 저장소 미포함)로 (a) 동일 템플릿 → 동일 해시 (b) 한 글자 다른 템플릿 → 다른 해시를 확인
   - 완료 기준
-    - [ ] 프롬프트 문자열만 수정해도 캐시가 자동 무효화되어 재호출됨
-    - [ ] 프롬프트 미변경 시에는 기존 캐시가 정상 히트
-    - [ ] Task 032(첨삭 개선)에서 프롬프트 변경 효과가 즉시 확인 가능한 상태
+    - [x] 프롬프트 문자열만 수정해도 캐시가 자동 무효화되어 재호출됨 (템플릿 문자열이 곧 해시 입력이므로 문구 변경 시 cacheKey가 자동으로 달라짐을 Node 스크립트로 검증 — Deno 런타임 실제 호출 검증은 미수행)
+    - [x] 프롬프트 미변경 시에는 기존 캐시가 정상 히트 (동일 템플릿 문자열 → 동일 해시 → 동일 cacheKey 확인, 동적 입력 필드는 기존과 동일하게 유지)
+    - [x] Task 032(첨삭 개선)에서 프롬프트 변경 효과가 즉시 확인 가능한 상태 (수동 버전 상수 관리 제거로 프롬프트 문구 수정만으로 캐시가 자동 무효화됨)
 
 - **Task 028: 리스트 행 컴포넌트 메모이제이션**
   - PRD 참조: 2.13 / 우선순위: 중 / 선행 조건: Task 018

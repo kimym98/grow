@@ -1,8 +1,9 @@
 /**
  * review-document / grade-short-answer 등 LLM 호출 결과를 캐싱하는 공용 헬퍼.
  * 동일한 (사용자, 함수, 입력) 조합에 대해 LLM API를 재호출하지 않도록 llm_response_cache 테이블에 결과를 저장/조회한다.
- * 캐시 키에 사용자 ID(RLS로 강제)와 프롬프트 버전을 포함해 다른 사용자 간 결과가 섞이거나
+ * 캐시 키에 사용자 ID(RLS로 강제)와 프롬프트 템플릿 해시를 포함해 다른 사용자 간 결과가 섞이거나
  * 프롬프트가 바뀐 뒤에도 예전 결과가 재사용되는 일이 없도록 한다.
+ * hashPromptTemplate은 프롬프트 템플릿 해시 전용 헬퍼로, Task 031(기업 분석) 등 다른 캐시에서도 재사용한다.
  */
 
 // deno-lint-ignore no-explicit-any
@@ -14,6 +15,11 @@ export async function sha256Hex(input: string): Promise<string> {
   return Array.from(new Uint8Array(digest))
     .map((byte) => byte.toString(16).padStart(2, "0"))
     .join("")
+}
+
+/** 프롬프트 템플릿(정적 문자열)의 해시를 계산한다. 템플릿 문구가 바뀌면 해시가 바뀌어 캐시가 자동 무효화된다 */
+export async function hashPromptTemplate(template: string): Promise<string> {
+  return sha256Hex(template)
 }
 
 /**

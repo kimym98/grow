@@ -17,27 +17,33 @@ export interface ShortAnswerGradeResult {
 
 const ANTHROPIC_MAX_TOKENS = 1024
 
-function buildGradingPrompt(input: { question: string; modelAnswer: string; userAnswer: string }): string {
-  return `당신은 CS 기술 면접관입니다. 아래 문제와 모범 답안을 기준으로 지원자의 답변을 채점하세요.
+// 사용자 입력이 보간되지 않는 고정 골격만 담은 템플릿. 이 문자열의 해시가 LLM 응답 캐시 키에 포함되어
+// 프롬프트 문구가 바뀌면 자동으로 캐시가 무효화된다 (index.ts의 hashPromptTemplate 참고)
+export const GRADING_PROMPT_TEMPLATE = `당신은 CS 기술 면접관입니다. 아래 문제와 모범 답안을 기준으로 지원자의 답변을 채점하세요.
 0~100점 사이의 점수와, 부족한 부분·잘한 부분을 구체적으로 짚어주는 피드백을 작성하세요.
 
 문제:
 """
-${input.question}
+{{QUESTION}}
 """
 
 모범 답안:
 """
-${input.modelAnswer}
+{{MODEL_ANSWER}}
 """
 
 지원자 답변:
 """
-${input.userAnswer}
+{{USER_ANSWER}}
 """
 
 다른 설명 없이 아래 JSON 형식으로만 응답하세요:
 {"score": number, "feedback": string}`
+
+function buildGradingPrompt(input: { question: string; modelAnswer: string; userAnswer: string }): string {
+  return GRADING_PROMPT_TEMPLATE.replace("{{QUESTION}}", input.question)
+    .replace("{{MODEL_ANSWER}}", input.modelAnswer)
+    .replace("{{USER_ANSWER}}", input.userAnswer)
 }
 
 function validateGradeResult(provider: string, parsed: unknown, rawText: string): ShortAnswerGradeResult {

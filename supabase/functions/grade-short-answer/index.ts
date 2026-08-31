@@ -3,9 +3,9 @@ import "@supabase/functions-js/edge-runtime.d.ts"
 import { withSupabase } from "@supabase/server"
 
 import { AuthRequiredError, jsonError, requireUserId } from "../_shared/auth.ts"
-import { getCachedLlmResponse, setCachedLlmResponse, sha256Hex } from "../_shared/llm-cache.ts"
+import { getCachedLlmResponse, setCachedLlmResponse, hashPromptTemplate, sha256Hex } from "../_shared/llm-cache.ts"
 import { logEdgeFunctionError } from "../_shared/error-log.ts"
-import { gradeShortAnswer, type LlmProviderName, type ShortAnswerGradeResult } from "./llm.ts"
+import { GRADING_PROMPT_TEMPLATE, gradeShortAnswer, type LlmProviderName, type ShortAnswerGradeResult } from "./llm.ts"
 
 interface GradeRequestBody {
   questionId: string
@@ -17,8 +17,6 @@ interface GradeRequestBody {
 const SUPPORTED_PROVIDERS: LlmProviderName[] = ["gemini", "anthropic"]
 const PASS_SCORE_THRESHOLD = 70
 const FUNCTION_NAME = "grade-short-answer"
-// 프롬프트(llm.ts의 buildGradingPrompt)를 바꾸면 캐시가 예전 결과를 재사용하지 않도록 버전을 올린다
-const PROMPT_VERSION = 1
 
 export default {
   fetch: withSupabase({ auth: ["user"] }, async (req, ctx) => {
@@ -74,9 +72,11 @@ export default {
     }
 
     try {
-      // 캐시 키: 프롬프트 버전 + provider + 문제 + 답변 텍스트. 같은 문제에 같은 답을 다시 제출하면(재제출) 캐시를 재사용한다
+      // 캐시 키: 프롬프트 템플릿 해시 + provider + 문제 + 답변 텍스트. 프롬프트 문구가 바뀌면 해시가 바뀌어
+      // 자동으로 캐시가 무효화되고, 같은 문제에 같은 답을 다시 제출하면(재제출) 캐시를 재사용한다
+      const promptTemplateHash = await hashPromptTemplate(GRADING_PROMPT_TEMPLATE)
       const cacheKey = await sha256Hex(
-        `v${PROMPT_VERSION}|${body.provider}|${body.questionId}|${body.answerText}`
+        `${promptTemplateHash}|${body.provider}|${body.questionId}|${body.answerText}`
       )
 
       const cached = await getCachedLlmResponse<ShortAnswerGradeResult>(ctx.supabase, FUNCTION_NAME, cacheKey)

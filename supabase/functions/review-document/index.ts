@@ -4,9 +4,14 @@ import { withSupabase } from "@supabase/server"
 import { extractText, getDocumentProxy } from "unpdf"
 
 import { AuthRequiredError, jsonError, requireUserId } from "../_shared/auth.ts"
-import { getCachedLlmResponse, setCachedLlmResponse, sha256Hex } from "../_shared/llm-cache.ts"
+import { getCachedLlmResponse, setCachedLlmResponse, hashPromptTemplate, sha256Hex } from "../_shared/llm-cache.ts"
 import { logEdgeFunctionError } from "../_shared/error-log.ts"
-import { generateDocumentReview, type DocumentReviewResult, type LlmProviderName } from "./llm.ts"
+import {
+  DOCUMENT_REVIEW_PROMPT_TEMPLATE,
+  generateDocumentReview,
+  type DocumentReviewResult,
+  type LlmProviderName,
+} from "./llm.ts"
 
 interface ReviewRequestBody {
   documentReviewId: string
@@ -21,8 +26,6 @@ interface DocumentReviewVersion {
 
 const SUPPORTED_PROVIDERS: LlmProviderName[] = ["gemini", "anthropic"]
 const FUNCTION_NAME = "review-document"
-// 프롬프트(llm.ts의 buildDocumentReviewPrompt)를 바꾸면 캐시가 예전 결과를 재사용하지 않도록 버전을 올린다
-const PROMPT_VERSION = 1
 
 export default {
   fetch: withSupabase({ auth: ["user"] }, async (req, ctx) => {
@@ -102,10 +105,12 @@ export default {
         throw new Error("PDF에서 텍스트를 추출하지 못했습니다")
       }
 
-      // 캐시 키: 프롬프트 버전 + provider + 문서 타입/문항 + 원문 해시.
-      // 동일 문서라도 재첨삭 시 원문(originalText)이 그대로면 캐시를 재사용하고, 원문이 바뀌면(재업로드) 새 키가 된다
+      // 캐시 키: 프롬프트 템플릿 해시 + provider + 문서 타입/문항 + 원문 해시. 프롬프트 문구가 바뀌면
+      // 해시가 바뀌어 자동으로 캐시가 무효화되고, 동일 문서라도 재첨삭 시 원문(originalText)이 그대로면
+      // 캐시를 재사용하고, 원문이 바뀌면(재업로드) 새 키가 된다
+      const promptTemplateHash = await hashPromptTemplate(DOCUMENT_REVIEW_PROMPT_TEMPLATE)
       const cacheKey = await sha256Hex(
-        `v${PROMPT_VERSION}|${body.provider}|${review.type}|${review.resume_question ?? ""}|${originalText}`
+        `${promptTemplateHash}|${body.provider}|${review.type}|${review.resume_question ?? ""}|${originalText}`
       )
 
       const cached = await getCachedLlmResponse<DocumentReviewResult>(ctx.supabase, FUNCTION_NAME, cacheKey)
