@@ -243,4 +243,16 @@ interface JobPostingSource {
 - [ ] 잡코리아 `/recruit/joblist` raw HTML을 직접 fetch(curl 등)해 실제 페이지네이션 파라미터, 총건수 위치, 마감일 텍스트 전체 패턴, 태그 매핑 가능 여부 확정 — Edge Function 구현 시 진행
 - [ ] `jobPostingSchema.deadline`을 nullable로 변경할지 여부 결정(잡코리아도 "상시채용" 등 마감일 없는 공고가 존재할 수 있음) — Edge Function 구현 작업에서 함께 결정
 - [ ] 잡코리아 크롤링에 대한 이용약관(robots.txt 외) 확인 — 필요 시 후속 검토
+
+---
+
+## Task 024: 딜레이·백오프·실패율 임계치 결정 근거 (2026-08-31)
+
+`collect-job-postings`/`collect-tech-news`에 요청 딜레이·백오프·실패율 모니터링을 추가하며 정한 상수값과 근거. 실제 구현은 `supabase/functions/_shared/fetch-with-policy.ts`(딜레이/백오프), `supabase/functions/_shared/collection-runner.ts`(소스 순차 실행/실패율 집계)에 있다.
+
+- **소스 사이 딜레이(1.5초, `collection-runner.ts`의 `minDelayMs` 기본값)**: 로드맵 요구사항이 "1~2초"였으므로 중간값을 채택했다. 소스를 `Promise.all` 병렬 실행에서 순차 실행 + 딜레이로 바꿔, 같은 함수 호출 안에서 여러 사이트에 짧은 시간 안에 요청이 몰리지 않도록 했다(etnews.ts는 같은 사이트 내 피드 2개 요청에도 동일 원리로 `INTER_FEED_DELAY_MS` 1.5초를 별도 적용).
+- **백오프(초기 500ms, 배율 2, 최대 3회 재시도, 총 예산 15초, `fetch-with-policy.ts`)**: 403/429/5xx만 재시도 대상으로 삼고 404 등 명백한 클라이언트 오류는 재시도하지 않는다. 총 예산 15초 상한은 소스 수가 늘어나도(Task 030에서 최대 5개 안팎 예상) Supabase Edge Function 실행시간 제한 안에 여유 있게 들어오도록 임의로 정한 값이며, 실측(로컬 검증 기준 소스당 200ms~1.7초)상 재시도가 발생하지 않는 한 영향이 없다.
+- **실패율 임계치(30%)와 최소 표본 수(3건)**: 로드맵 예시값을 그대로 채택했다. 이번 배치 결과 하나만으로 판정하면 소스 1개 실패 시 실패율이 100%가 되어 과민 반응하므로, 로그 테이블(`job_collection_logs`/`news_collection_logs`)에서 소스별 최근 10건(`recentSampleSize`)을 재조회해 판정한다. 최근 로그가 3건 미만이면 표본 부족으로 판정을 보류해 초기 1~2회 실패로 오탐이 발생하지 않도록 했다.
+- **측정 주기**: 별도 크론이나 대시보드를 새로 만들지 않고, 이미 `pg_cron`으로 하루 2회(00:00, 09:00) 호출되는 두 수집 함수 실행 시점에 "얹혀서" 판정하도록 했다(수집 로그 insert 직후 같은 소스의 최근 로그를 재조회). 알림은 기존 `_shared/error-log.ts`의 `logEdgeFunctionError`(→ `edge_function_error_logs` insert + `ALERT_WEBHOOK_URL` 설정 시 webhook)를 그대로 재사용해 별도 알림 채널을 신설하지 않았다.
+- **로컬 재현 검증(2026-08-31)**: `job_collection_logs`에 `jobkorea` failure row 4건을 직접 seed한 뒤(최근 10건 중 40%) `collect-job-postings`를 재호출하자 `edge_function_error_logs`에 `"소스 jobkorea 최근 실패율 40% (임계치 30% 초과, 표본 10건)"` row가 실제로 생성됨을 확인했다.
 - [ ] 자소설닷컴/캐치: 사용자가 브라우저 개발자도구로 실제 목록 로딩 방식(정적 HTML vs 내부 API, 정확한 엔드포인트) 확인 후 공유 — 확인되면 후속 Task에서 크롤링 어댑터 추가

@@ -1,3 +1,4 @@
+import { fetchWithBackoff } from "../../_shared/fetch-with-policy.ts"
 import type { JobPostingSource, NormalizedJobPosting } from "../types.ts"
 
 /**
@@ -102,7 +103,7 @@ function normalizeBlock(block: string): NormalizedJobPosting | null {
 }
 
 async function fetchAll(): Promise<NormalizedJobPosting[]> {
-  const response = await fetch(LIST_URL, {
+  const response = await fetchWithBackoff(LIST_URL, {
     headers: { "User-Agent": USER_AGENT },
   })
   if (!response.ok) {

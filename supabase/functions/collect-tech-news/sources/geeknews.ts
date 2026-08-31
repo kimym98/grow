@@ -1,3 +1,4 @@
+import { fetchWithBackoff } from "../../_shared/fetch-with-policy.ts"
 import type { NewsSource, NormalizedNewsItem } from "../types.ts"
 
 /**
@@ -56,7 +57,7 @@ function normalizeEntry(block: string): NormalizedNewsItem | null {
 }
 
 async function fetchAll(): Promise<NormalizedNewsItem[]> {
-  const response = await fetch(FEED_URL, {
+  const response = await fetchWithBackoff(FEED_URL, {
     headers: { "User-Agent": USER_AGENT },
   })
   if (!response.ok) {

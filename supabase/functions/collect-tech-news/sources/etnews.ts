@@ -1,3 +1,4 @@
+import { delay, fetchWithBackoff } from "../../_shared/fetch-with-policy.ts"
 import type { NewsSource, NormalizedNewsItem } from "../types.ts"
 
 /**
@@ -16,6 +17,9 @@ const FEED_URLS = [
   "https://rss.etnews.com/04045.xml", // 보안
 ]
 const USER_AGENT = "grow-news-collector/1.0 (non-commercial personal project)"
+
+/** 같은 사이트(etnews)로 나가는 두 피드 요청 사이 최소 간격(ms). 동시 요청으로 인한 트래픽 집중을 피한다 */
+const INTER_FEED_DELAY_MS = 1500
 
 function extractCdata(value: string): string {
   const match = value.match(/<!\[CDATA\[([\s\S]*?)\]\]>/)
@@ -61,7 +65,7 @@ function normalizeItem(block: string): NormalizedNewsItem | null {
 }
 
 async function fetchFeed(url: string): Promise<NormalizedNewsItem[]> {
-  const response = await fetch(url, {
+  const response = await fetchWithBackoff(url, {
     headers: { "User-Agent": USER_AGENT },
   })
   if (!response.ok) {
@@ -91,8 +95,16 @@ function dedupeByUrl(items: NormalizedNewsItem[]): NormalizedNewsItem[] {
   return Array.from(seen.values())
 }
 
+/**
+ * 같은 사이트로 나가는 요청이 겹치지 않도록 피드를 순차적으로 요청하고,
+ * 마지막 피드가 아니면 다음 요청 전에 최소 간격을 둔다.
+ */
 async function fetchAll(): Promise<NormalizedNewsItem[]> {
-  const results = await Promise.all(FEED_URLS.map(fetchFeed))
+  const results: NormalizedNewsItem[][] = []
+  for (const [index, url] of FEED_URLS.entries()) {
+    results.push(await fetchFeed(url))
+    if (index < FEED_URLS.length - 1) await delay(INTER_FEED_DELAY_MS)
+  }
   return dedupeByUrl(results.flat())
 }
 
