@@ -44,6 +44,7 @@ function initSentryIfConfigured() {
   if (!process.env.SENTRY_DSN) return;
 
   try {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports -- 위 주석 참고: 정적 import 시 전이 의존성 누락으로 패키징이 깨질 수 있어 의도적으로 런타임 조건부 require 사용
     const { init: initSentryMain } = require("@sentry/electron/main");
     initSentryMain({ dsn: process.env.SENTRY_DSN });
   } catch (error) {

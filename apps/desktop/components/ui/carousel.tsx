@@ -95,6 +95,7 @@ function Carousel({
 
   React.useEffect(() => {
     if (!api) return
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- embla-carousel 공식 예제 패턴: 외부 라이브러리 인스턴스 이벤트 구독 설정
     onSelect(api)
     api.on("reInit", onSelect)
     api.on("select", onSelect)

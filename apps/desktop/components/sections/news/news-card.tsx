@@ -42,6 +42,7 @@ function NewsCard({
   const { resolvedTheme } = useTheme();
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- 하이드레이션 불일치 방지용 next-themes 표준 mounted 패턴
     setMounted(true);
   }, []);
 

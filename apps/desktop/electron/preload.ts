@@ -5,6 +5,7 @@ import { contextBridge, ipcRenderer } from "electron";
 // contextBridge 등록조차 안 되는 심각한 실패 모드가 생긴다. SENTRY_DSN 미설정 시에는 애초에
 // 필요 없으므로, 실패해도 무시 가능하도록 감싸서 로드한다.
 try {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports -- 위 주석 참고: 정적 import 시 preload 전체 로드 실패 위험이 있어 의도적으로 require 사용
   require("@sentry/electron/preload");
 } catch (error) {
   console.error("[sentry] preload 브리지 로드 실패(무시 가능):", error);

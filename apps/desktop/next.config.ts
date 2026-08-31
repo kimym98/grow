@@ -1,8 +1,7 @@
 import type { NextConfig } from "next";
 import { PHASE_DEVELOPMENT_SERVER } from "next/constants";
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export default (phase: string): NextConfig => {
+const nextConfig = (phase: string): NextConfig => {
   const isDev = phase === PHASE_DEVELOPMENT_SERVER;
 
   if (isDev) {
@@ -22,3 +21,5 @@ export default (phase: string): NextConfig => {
     trailingSlash: true,
   };
 };
+
+export default nextConfig;

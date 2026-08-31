@@ -35,6 +35,15 @@ const CARD_BACKGROUND_COLORS = [
   "#FFFFFF",
 ];
 
+/** news.id를 CARD_BACKGROUND_COLORS 인덱스로 결정적으로 매핑하는 해시 함수 */
+function hashStringToIndex(value: string, modulo: number): number {
+  let hash = 0;
+  for (const char of value) {
+    hash = (hash * 31 + char.charCodeAt(0)) >>> 0;
+  }
+  return hash % modulo;
+}
+
 /**
  * 대시보드 상단에 표시되는 "오늘의 뉴스" 캐러셀
  * 당일(isToday) 뉴스만 필터링해 노출하고, 0건이면 최근순 상위 N개로 폴백한다.
@@ -80,15 +89,14 @@ function TodayNewsCarousel() {
   const cardColorMap = useMemo(() => {
     const map = new Map<string, string>();
     items.forEach((news) => {
-      const randomColor =
+      const color =
         CARD_BACKGROUND_COLORS[
-          Math.floor(Math.random() * CARD_BACKGROUND_COLORS.length)
+          hashStringToIndex(news.id, CARD_BACKGROUND_COLORS.length)
         ];
-      map.set(news.id, randomColor);
+      map.set(news.id, color);
     });
     return map;
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [items.map((news) => news.id).join(",")]);
+  }, [items]);
 
   async function toggleBookmark(id: string) {
     const target = newsList.find((news) => news.id === id);
