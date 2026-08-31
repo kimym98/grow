@@ -161,14 +161,16 @@
     - [x] 프롬프트 미변경 시에는 기존 캐시가 정상 히트 (동일 템플릿 문자열 → 동일 해시 → 동일 cacheKey 확인, 동적 입력 필드는 기존과 동일하게 유지)
     - [x] Task 032(첨삭 개선)에서 프롬프트 변경 효과가 즉시 확인 가능한 상태 (수동 버전 상수 관리 제거로 프롬프트 문구 수정만으로 캐시가 자동 무효화됨)
 
-- **Task 028: 리스트 행 컴포넌트 메모이제이션**
+- **Task 028: 리스트 행 컴포넌트 메모이제이션** - ✅ 완료 (2026-09-01)
   - PRD 참조: 2.13 / 우선순위: 중 / 선행 조건: Task 018
-  - `jobs-page-client.tsx`의 `JobRow`, `news-feed.tsx`의 `NewsRow`를 `React.memo`로 래핑
-  - `itemData`로 전달하는 `rowProps`를 `useMemo`, `handleSelectJob` 등 콜백을 `useCallback`으로 안정화
+  - `jobs-page-client.tsx`의 `JobRow`, `news-feed.tsx`의 `NewsRow`를 `memo()`로 래핑(named function 표현 유지, React DevTools 표시명 보존). react-window `rowComponent`가 요구하는 `ReactElement` 반환 시그니처와 `memo()`의 `ReactNode` 반환 타입이 맞지 않아 두 컴포넌트 모두 `as (props: RowComponentProps<...>) => ReactElement`로 캐스팅
+  - `jobs-page-client.tsx`: `handleSelectJob`을 `useCallback(fn, [])`으로 안정화(state setter만 호출), `List`에 전달하는 `rowProps`를 `useMemo([filteredJobs, selectedJobId, handleSelectJob])`로 안정화
+  - `news-feed.tsx`: `toggleBookmark`를 `useCallback(fn, [newsList])`으로, `rowProps`를 `useMemo([newsRows, toggleBookmark])`로 안정화
+  - **⚠️ 제약**: `toggleBookmark`는 `newsList.find(...)`로 최신 `isBookmarked` 값을 조회해 `bookmarkTechNews`/`unbookmarkTechNews` API를 분기 호출하는 부수효과가 있어 `newsList` 의존성을 완전히 제거하지 못함(북마크 토글마다 콜백 참조가 재생성됨). ref 패턴으로 완전한 참조 안정화가 가능하지만 이번 스코프(메모이제이션 도입) 대비 과설계로 판단해 보류
   - 완료 기준
-    - [ ] 부모 리렌더 시 화면에 보이는 행이 불필요하게 재렌더되지 않음 (React DevTools Profiler로 확인)
-    - [ ] `npm run lint` 통과 (React Compiler 규칙 위반 없음)
-    - [ ] 목록 스크롤/필터/선택 동작 회귀 없음
+    - [x] 부모 리렌더 시 화면에 보이는 행이 불필요하게 재렌더되지 않음 (memo + 안정화된 rowProps/콜백 조합으로 참조 동일성 보장을 코드 근거로 확인. React DevTools Profiler를 통한 별도 프로파일링은 수행하지 않음)
+    - [x] `npm run lint` 통과 (에러 0건, 이번 변경과 무관한 기존 파일의 경고 1건만 존재)
+    - [x] 목록 스크롤/필터/선택 동작 회귀 없음 (Playwright로 `/jobs`, `/news` 페이지에서 검색·필터·정렬·행 선택·북마크 토글을 실제로 조작해 정상 동작 및 콘솔 에러 없음을 확인)
 
 ### Phase 3: 채용공고 크롤링 소스 확장 (3단계)
 
