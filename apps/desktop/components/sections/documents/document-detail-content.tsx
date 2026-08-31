@@ -12,9 +12,12 @@ import { DocumentStatusBadge } from "@/components/sections/documents/document-st
 
 interface DocumentDetailContentProps {
   document: DocumentReview
+  canRetry: boolean
+  isRetrying: boolean
+  onRetry: () => void
 }
 
-function DocumentDetailContent({ document }: DocumentDetailContentProps) {
+function DocumentDetailContent({ document, canRetry, isRetrying, onRetry }: DocumentDetailContentProps) {
   const [selectedVersion, setSelectedVersion] = useState(
     document.versions.at(-1)?.version ?? document.version
   )
@@ -82,12 +85,34 @@ function DocumentDetailContent({ document }: DocumentDetailContentProps) {
             </p>
           </CardContent>
         </Card>
+      ) : document.status === "failed" ? (
+        <Card>
+          <CardContent className="flex flex-col gap-3">
+            <p className="text-sm text-muted-foreground">
+              첨삭에 실패했습니다
+              {document.versions.at(-1)?.summary ? `: ${document.versions.at(-1)?.summary}` : "."}
+            </p>
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              className="self-start"
+              disabled={!canRetry || isRetrying}
+              onClick={onRetry}
+            >
+              {isRetrying ? "재시도 중..." : "다시 시도"}
+            </Button>
+            {!canRetry ? (
+              <p className="text-xs text-muted-foreground">
+                등록된 AI API 키가 없어 재시도할 수 없습니다. 설정에서 키를 등록해주세요.
+              </p>
+            ) : null}
+          </CardContent>
+        </Card>
       ) : (
         <Card>
           <CardContent className="text-sm text-muted-foreground">
-            {document.status === "failed"
-              ? "첨삭에 실패했습니다. 버전 히스토리에서 실패 사유를 확인해주세요."
-              : "첨삭이 진행 중입니다. 완료되면 자동으로 결과가 표시됩니다."}
+            첨삭이 진행 중입니다. 완료되면 자동으로 결과가 표시됩니다.
           </CardContent>
         </Card>
       )}

@@ -48,6 +48,7 @@ function DocumentsPageClient() {
     searchParams.get("id")
   )
   const [isUploadOpen, setIsUploadOpen] = useState(false)
+  const [retryingDocumentId, setRetryingDocumentId] = useState<string | null>(null)
   const pollTimerRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
   const selectedDocument = useMemo(
@@ -136,6 +137,23 @@ function DocumentsPageClient() {
     }
   }
 
+  async function handleRetry(documentReviewId: string) {
+    if (availableProviders.length === 0) {
+      toast.error("먼저 설정에서 LLM API 키를 등록해주세요")
+      return
+    }
+
+    setRetryingDocumentId(documentReviewId)
+    try {
+      await triggerDocumentReview(documentReviewId, availableProviders[0])
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "첨삭 재시도에 실패했습니다")
+    } finally {
+      await loadDocuments()
+      setRetryingDocumentId(null)
+    }
+  }
+
   const hasRegisteredKey = availableProviders.length > 0
 
   function handleUploadClick() {
@@ -202,7 +220,12 @@ function DocumentsPageClient() {
         }
         detail={
           selectedDocument ? (
-            <DocumentDetailContent document={selectedDocument} />
+            <DocumentDetailContent
+              document={selectedDocument}
+              canRetry={hasRegisteredKey}
+              isRetrying={retryingDocumentId === selectedDocument.id}
+              onRetry={() => handleRetry(selectedDocument.id)}
+            />
           ) : (
             <EmptyState title="문서를 선택해주세요" description="목록에서 첨삭받을 문서를 클릭하세요" />
           )

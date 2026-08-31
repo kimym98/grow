@@ -138,14 +138,16 @@
     - [x] 통합 후 `grade-short-answer`, `review-document`의 요청/응답 스키마·에러 메시지·PROMPT_VERSION이 통합 전과 동일 (코드/`git diff` 비교로 확인 — index.ts 무변경, 프롬프트 문자열 diff 없음)
     - [ ] `supabase functions serve` 로컬 실행 및 배포 성공 (미검증 — 로컬에 Deno CLI 미설치로 `deno check`/`functions serve` 실행 불가, 후속 확인 필요)
 
-- **Task 026: LLM 호출 타임아웃 누적 개선 및 워치독**
+- **Task 026: LLM 호출 타임아웃 누적 개선 및 워치독** - ✅ 완료 (2026-09-01)
   - PRD 참조: 2.6 / 우선순위: 중 / 선행 조건: **Task 025** (통합된 단일 소스에 적용)
-  - 전체 재시도 예산 상한(예: 총 90초) 기반 시간 타임아웃 도입 — 60초 × 3회(최대 약 3분) 구조 제거
-  - `processing` 상태로 일정 시간 이상 머무른 `document_reviews` 레코드를 `failed`로 전환하는 워치독 추가 (스케줄 함수 또는 클라이언트 폴링 시 타임아웃 판정)
+  - 전체 재시도 예산 상한(총 90초) 기반 시간 타임아웃 도입 — 60초 × 3회(최대 약 3분) 구조 제거. `packages/shared/src/lib/llm/fetch-with-retry.ts`(Node)와 `supabase/functions/_shared/llm-client.ts`(Deno) 양쪽에 `totalBudgetMs` 옵션(기본 90_000ms)을 동일하게 추가 — 매 attempt마다 남은 예산과 개별 타임아웃(60초) 중 작은 값으로 재계산, 예산 소진 시 즉시 중단
+  - `document_reviews`가 `processing`에 영구 고착되지 않도록 pg_cron 기반 워치독 마이그레이션(`supabase/migrations/20260831165928_document_reviews_watchdog.sql`) 추가 — 5분 주기로 `processing` + `updated_at`이 10분 이상 지난 레코드를 `failed`로 전환, `review-document/index.ts` catch 블록과 동일한 셰이프로 `versions`에 실패 로그 append
+  - `apps/desktop`의 문서 첨삭 화면(`documents-page-client.tsx`, `document-detail-content.tsx`)에 실패 사유(마지막 버전 summary) 표시 및 "다시 시도" 버튼 추가 (기존 `triggerDocumentReview` 재사용)
+  - **⚠️ 검증 범위 일부 제한**: Deno CLI가 로컬에 미설치되어(Task 025와 동일 제약) `_shared/llm-client.ts`의 예산 로직은 Node(`tsx`)로 로직만 동일하게 추출해 mock fetch로 검증 — 실제 Deno 런타임 검증은 미수행. UI 재시도 경로도 로그인 세션·실제 LLM API 키가 필요한 end-to-end 브라우저 확인은 미수행(lint/tsc 정적 검증으로 대체)
   - 완료 기준
-    - [ ] 5xx/429 반복 상황을 모의했을 때 전체 예산 내에 실패 응답 반환
-    - [ ] 함수가 강제 종료된 레코드가 영구 `processing`으로 남지 않고 `failed`로 전환됨
-    - [ ] 사용자 UI에 실패 상태와 재시도 경로가 노출됨
+    - [x] 5xx/429 반복 상황을 모의했을 때 전체 예산 내에 실패 응답 반환 (mock fetch로 5xx 반복 시 개별 timeoutMs=2s·retryCount=10이어도 totalBudgetMs=1.2s 근처에서 종료됨을 확인, 두 구현 동일 검증)
+    - [x] 함수가 강제 종료된 레코드가 영구 `processing`으로 남지 않고 `failed`로 전환됨 (`db reset` 후 processing 레코드 seed → 워치독 SQL 수동 실행 → failed 전환 확인)
+    - [x] 사용자 UI에 실패 상태와 재시도 경로가 노출됨 (실패 사유 텍스트 + 재시도 버튼 추가, lint/tsc 통과 — 위 예외 참고)
 
 - **Task 027: 프롬프트 해시 기반 캐시 자동 무효화**
   - PRD 참조: 2.12 / 우선순위: 중 / 선행 조건: **Task 025**

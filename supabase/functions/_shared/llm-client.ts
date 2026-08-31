@@ -13,10 +13,14 @@
 // 30초는 실제로 자주 타임아웃되는 것을 확인함 -> 여유를 두고 60초로 설정
 const DEFAULT_TIMEOUT_MS = 60_000
 const DEFAULT_RETRY_COUNT = 2
+// 전체 시도 누적 시간 상한. 개별 타임아웃(60초) x 재시도(최대 3회)가 그대로 누적되면
+// 최대 180초까지 걸릴 수 있어, 예산을 넘기면 즉시 중단하도록 한다 (Task 026)
+const DEFAULT_TOTAL_BUDGET_MS = 90_000
 
 export interface FetchWithRetryOptions {
   timeoutMs?: number
   retryCount?: number
+  totalBudgetMs?: number
 }
 
 export async function fetchWithRetry(
@@ -27,12 +31,18 @@ export async function fetchWithRetry(
 ): Promise<Response> {
   const timeoutMs = options.timeoutMs ?? DEFAULT_TIMEOUT_MS
   const retryCount = options.retryCount ?? DEFAULT_RETRY_COUNT
+  const totalBudgetMs = options.totalBudgetMs ?? DEFAULT_TOTAL_BUDGET_MS
 
+  const startedAt = Date.now()
   let lastError: unknown
 
   for (let attempt = 0; attempt <= retryCount; attempt += 1) {
+    const remainingBudgetMs = totalBudgetMs - (Date.now() - startedAt)
+    if (remainingBudgetMs <= 0) break
+
+    const perAttemptTimeoutMs = Math.min(timeoutMs, remainingBudgetMs)
     const controller = new AbortController()
-    const timer = setTimeout(() => controller.abort(), timeoutMs)
+    const timer = setTimeout(() => controller.abort(), perAttemptTimeoutMs)
 
     try {
       const response = await fetch(url, { ...init, signal: controller.signal })
@@ -53,12 +63,14 @@ export async function fetchWithRetry(
 
       lastError =
         error instanceof Error && error.name === "AbortError"
-          ? new Error(`${provider} 요청이 ${timeoutMs}ms 안에 응답하지 않았습니다`)
+          ? new Error(`${provider} 요청이 ${perAttemptTimeoutMs}ms 안에 응답하지 않았습니다`)
           : new Error(`${provider} 요청 실패: ${String(error)}`)
     }
   }
 
-  throw lastError instanceof Error ? lastError : new Error(`${provider} 요청 실패`)
+  throw lastError instanceof Error
+    ? lastError
+    : new Error(`${provider} 요청이 전체 예산(${totalBudgetMs}ms) 내에 완료되지 않았습니다`)
 }
 
 /** 모델 응답에서 JSON 객체 부분만 안전하게 추출해 파싱한다 (모델이 JSON 외 텍스트를 덧붙이는 경우 대비) */
