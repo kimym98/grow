@@ -93,6 +93,17 @@ components/
 - `@/*` = 프로젝트 루트
 - `@/components`, `@/lib` 등으로 import
 
+## 상세 가이드 문서
+
+더 자세한 규칙과 패턴은 `docs/guides/` 하위 문서를 참고하세요.
+
+- [프로젝트 구조 가이드](docs/guides/project-structure.md) - 폴더 구조, 파일 조직, 네이밍 컨벤션
+- [Next.js 16 개발 지침](docs/guides/nextjs-16.md) - App Router 아키텍처 및 핵심 규칙
+- [컴포넌트 패턴 가이드](docs/guides/component-patterns.md) - 재사용 가능한 컴포넌트 작성 패턴
+- [스타일링 & 디자인 시스템 가이드](docs/guides/styling-guide.md) - Tailwind CSS 토큰, 다크모드
+- [React Hook Form + Zod 가이드](docs/guides/forms-react-hook-form.md) - Server Actions 포함 폼 처리 패턴
+- [Electron 데스크탑 앱 배포 가이드](docs/guides/electron-release-guide.md) - 빌드 및 릴리스 실행 절차
+
 ## 주의사항
 
 - 기본 언어는 한국어 (layout.tsx에서 `lang="ko"`)
