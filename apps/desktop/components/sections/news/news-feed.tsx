@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useMemo, useState } from "react"
+import { memo, useCallback, useEffect, useMemo, useState, type ReactElement } from "react"
 import { Search } from "lucide-react"
 import { List, type RowComponentProps } from "react-window"
 import type { TechNews } from "@app/shared"
@@ -37,7 +37,12 @@ interface NewsRowProps {
   onToggleBookmark: (id: string) => void
 }
 
-function NewsRow({ index, style, rows, onToggleBookmark }: RowComponentProps<NewsRowProps>) {
+const NewsRow = memo(function NewsRow({
+  index,
+  style,
+  rows,
+  onToggleBookmark,
+}: RowComponentProps<NewsRowProps>) {
   const row = rows[index]
 
   return (
@@ -47,7 +52,7 @@ function NewsRow({ index, style, rows, onToggleBookmark }: RowComponentProps<New
       ))}
     </div>
   )
-}
+}) as (props: RowComponentProps<NewsRowProps>) => ReactElement
 
 function NewsFeed() {
   const [newsList, setNewsList] = useState<TechNews[]>([])
@@ -74,25 +79,30 @@ function NewsFeed() {
     }
   }, [])
 
-  async function toggleBookmark(id: string) {
-    const target = newsList.find((news) => news.id === id)
-    if (!target) return
+  // isBookmarked 최신값 조회를 위해 newsList를 참조하는 부수효과(API 분기 호출)가 있어
+  // 완전한 참조 안정화 대신 newsList를 의존성으로 명시한다
+  const toggleBookmark = useCallback(
+    async (id: string) => {
+      const target = newsList.find((news) => news.id === id)
+      if (!target) return
 
-    try {
-      if (target.isBookmarked) {
-        await unbookmarkTechNews(id)
-      } else {
-        await bookmarkTechNews(id)
-      }
-      setNewsList((prev) =>
-        prev.map((news) =>
-          news.id === id ? { ...news, isBookmarked: !news.isBookmarked } : news
+      try {
+        if (target.isBookmarked) {
+          await unbookmarkTechNews(id)
+        } else {
+          await bookmarkTechNews(id)
+        }
+        setNewsList((prev) =>
+          prev.map((news) =>
+            news.id === id ? { ...news, isBookmarked: !news.isBookmarked } : news
+          )
         )
-      )
-    } catch (error) {
-      console.error("북마크 처리 실패:", error instanceof Error ? error.message : error)
-    }
-  }
+      } catch (error) {
+        console.error("북마크 처리 실패:", error instanceof Error ? error.message : error)
+      }
+    },
+    [newsList]
+  )
 
   const filteredNewsList = useMemo(() => {
     const query = searchQuery.trim().toLowerCase()
@@ -113,6 +123,11 @@ function NewsFeed() {
     }
     return rows
   }, [filteredNewsList, columnCount])
+
+  const newsRowProps = useMemo(
+    () => ({ rows: newsRows, onToggleBookmark: toggleBookmark }),
+    [newsRows, toggleBookmark]
+  )
 
   if (isLoading) {
     return <EmptyState title="뉴스를 불러오는 중입니다" description="잠시만 기다려주세요" />
@@ -151,7 +166,7 @@ function NewsFeed() {
             rowComponent={NewsRow}
             rowCount={newsRows.length}
             rowHeight={NEWS_ROW_HEIGHT}
-            rowProps={{ rows: newsRows, onToggleBookmark: toggleBookmark }}
+            rowProps={newsRowProps}
           />
         </div>
       )}

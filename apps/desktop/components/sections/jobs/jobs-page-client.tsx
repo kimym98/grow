@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useMemo, useState } from "react"
+import { memo, useCallback, useEffect, useMemo, useState, type ReactElement } from "react"
 import { useSearchParams } from "next/navigation"
 import dynamic from "next/dynamic"
 import { List, type RowComponentProps } from "react-window"
@@ -27,7 +27,13 @@ interface JobRowProps {
   onSelect: (jobId: string) => void
 }
 
-function JobRow({ index, style, jobs, selectedJobId, onSelect }: RowComponentProps<JobRowProps>) {
+const JobRow = memo(function JobRow({
+  index,
+  style,
+  jobs,
+  selectedJobId,
+  onSelect,
+}: RowComponentProps<JobRowProps>) {
   const job = jobs[index]
 
   return (
@@ -51,7 +57,7 @@ function JobRow({ index, style, jobs, selectedJobId, onSelect }: RowComponentPro
       </button>
     </div>
   )
-}
+}) as (props: RowComponentProps<JobRowProps>) => ReactElement
 
 function JobsPageClient() {
   const searchParams = useSearchParams()
@@ -122,9 +128,14 @@ function JobsPageClient() {
 
   const selectedJob = allJobs.find((job) => job.id === selectedJobId) ?? null
 
-  function handleSelectJob(jobId: string) {
+  const handleSelectJob = useCallback((jobId: string) => {
     setSelectedJobId(jobId)
-  }
+  }, [])
+
+  const jobRowProps = useMemo(
+    () => ({ jobs: filteredJobs, selectedJobId, onSelect: handleSelectJob }),
+    [filteredJobs, selectedJobId, handleSelectJob]
+  )
 
   function handleFilterChange<T>(setter: (value: T) => void) {
     return (value: T) => {
@@ -164,7 +175,7 @@ function JobsPageClient() {
                 rowComponent={JobRow}
                 rowCount={filteredJobs.length}
                 rowHeight={JOB_ROW_HEIGHT}
-                rowProps={{ jobs: filteredJobs, selectedJobId, onSelect: handleSelectJob }}
+                rowProps={jobRowProps}
               />
             </div>
           )}
