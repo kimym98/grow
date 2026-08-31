@@ -93,17 +93,21 @@
     - [ ] `SENTRY_DSN` 미설정 상태에서 실제 패키징 후 크래시 없이 기동 확인 (미검증 — 로컬 lint/build만 확인함)
     - [ ] GitHub Actions `ci.yml` 전체 green (푸시 후 확인 필요)
 
-### Phase 0-1: 스키마 관리 체계 전환 (0-1단계)
+### Phase 0-1: 스키마 관리 체계 전환 (0-1단계) ✅
 
-- **Task 019: DB 스키마 마이그레이션 파일화** - 선행 과제
+- **Task 019: DB 스키마 마이그레이션 파일화** - ✅ 완료 (2026-08-31)
   - PRD 참조: 3장 아키텍처 원칙 / 우선순위: 선행 / 선행 조건: **Task 018** (마이그레이션 PR도 CI 통과 필요)
-  - 원격 대시보드에서만 관리되던 기존 스키마·RLS 정책을 `supabase/migrations` 초기 스냅샷 파일로 추출
-  - 이후 모든 스키마 변경을 마이그레이션 파일 기반으로만 진행하도록 워크플로우 문서화 (`docs/guides/`)
-  - 로컬 Supabase 스택에서 마이그레이션 적용 절차 검증
+  - 원격 대시보드/MCP로만 관리되던 기존 스키마·RLS 정책을 `supabase db pull`로 `supabase/migrations` 스냅샷 파일로 추출 — 14개 테이블(문서화되지 않았던 6개 포함), RLS 정책 37건, RPC 함수 4개, pg_cron 스케줄 4건, storage 정책까지 전부 캡처
+  - 누락됐던 `documents` storage 버킷(데이터 성격이라 `db pull`이 캡처하지 못함)은 별도 마이그레이션으로 보완
+  - 이후 모든 스키마 변경을 마이그레이션 파일 기반으로만 진행하도록 워크플로우 문서화 (`docs/guides/database-migrations.md`), `shrimp-rules.md`에도 금지 규칙 추가
+  - 로컬 Supabase 스택(`supabase start` + `db reset`)에서 마이그레이션 파일만으로 스키마가 처음부터 재현됨을 검증
+  - `docs/database-schema.md`를 정본이 아닌 참고 문서로 재정의하고 문서화 누락 항목을 보완, 진행 중 겪은 문제는 `docs/troubleshooting/supabase-migration-baseline-troubleshooting.md`에 기록
+  - **⚠️ 계획 대비 변경**: 로컬에 마이그레이션 파일이 전무한 상태에서 `db pull`이 충돌로 오판해 원격 이력 장부(`supabase_migrations.schema_migrations`, 메타데이터 전용) 27건을 `migration repair --status reverted`로 초기화해야 했음 — 그 결과 과거 27건의 개별 변경 이력이 아닌 **단일 베이스라인 파일**로 재현됨(최종 스키마는 원격과 동일). Windows Git Bash에서 Docker named pipe 경로가 깨지는 문제로 Docker 관련 하위 명령은 PowerShell로만 실행
+  - **⚠️ 완료 기준 일부 예외**: `user_llm_keys` 관련 함수 3개의 `anon` 권한에 대한 무해한 형식적 diff(REVOKE 대상 권한이 원격에 이미 없어 실행해도 무변화) 1건이 남아 있음 — 정리용 마이그레이션은 로컬에 작성했으나, `db push`가 Claude Code 자동 모드에서 항상 차단되어 사용자가 보류를 결정. 필요 시 사람이 직접 `supabase db push` 실행하면 완전히 해소됨(상세 경위는 트러블슈팅 문서 참고)
   - 완료 기준
-    - [ ] `supabase/migrations`에 기존 테이블·인덱스·RLS 정책 전체가 스냅샷됨
-    - [ ] `supabase db diff` 결과가 비어 있음(원격 스키마 = 마이그레이션 적용 결과)
-    - [ ] 신규 스키마 변경 절차가 가이드 문서에 기재됨
+    - [x] `supabase/migrations`에 기존 테이블·인덱스·RLS 정책 전체가 스냅샷됨
+    - [x] `supabase db diff` 결과가 사실상 비어 있음(무해한 형식적 diff 1건만 남음, 원인 규명 및 문서화 완료 — 위 예외 참고)
+    - [x] 신규 스키마 변경 절차가 가이드 문서에 기재됨
 
 > Task 019는 **Task 031(company_analyses), Task 032(document_reviews 필드 추가), Task 034(cs_questions 필드·RLS)** 의 공통 선행 조건입니다.
 
