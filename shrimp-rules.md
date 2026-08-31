@@ -41,6 +41,7 @@
 
 ## 금지 사항
 
+- DB 스키마 변경(테이블/컬럼/RLS 정책/함수 생성·수정·삭제)은 반드시 `supabase/migrations/*.sql` 파일로만 진행할 것 (`docs/guides/database-migrations.md` 참고). `mcp__supabase__apply_migration`/`mcp__supabase__execute_sql`로 원격에 직접 DDL을 실행하지 말 것 — 두 도구는 조회(`SELECT`) 용도로만 사용한다. `supabase db push`는 원격 DB에 직접 쓰는 작업이라 자동 모드에서 항상 차단되므로, 마이그레이션 파일 작성·로컬 검증까지만 수행하고 원격 반영은 사용자에게 직접 실행을 안내할 것.
 - `apps/desktop/app/page.tsx` 등 페이지 파일에서 `<Header>`/`<Footer>`/`<ThemeProvider>`를 직접 import해 재선언하지 말 것 (레이아웃에서 자동 상속됨).
 - 사이트명/설명/URL 등을 컴포넌트에 직접 문자열로 하드코딩하지 말 것 — 반드시 `SITE_CONFIG` 참조.
 - 컴포넌트 스타일링에 인라인 `style` 속성이나 별도 `.css`/`.module.css` 파일 사용 금지 — Tailwind 유틸리티 클래스만 사용.

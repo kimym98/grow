@@ -103,6 +103,7 @@ components/
 - [스타일링 & 디자인 시스템 가이드](docs/guides/styling-guide.md) - Tailwind CSS 토큰, 다크모드
 - [React Hook Form + Zod 가이드](docs/guides/forms-react-hook-form.md) - Server Actions 포함 폼 처리 패턴
 - [Electron 데스크탑 앱 배포 가이드](docs/guides/electron-release-guide.md) - 빌드 및 릴리스 실행 절차
+- [DB 스키마 마이그레이션 가이드](docs/guides/database-migrations.md) - Supabase 마이그레이션 파일 생성부터 원격 반영까지 절차
 
 ## 주의사항
 

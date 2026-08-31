@@ -1,5 +1,15 @@
 # 데이터베이스 스키마 설계 (Task 008)
 
+> **⚠️ 정본 안내 (Task 019, 2026-08-31)**: 이 문서는 최초 설계 배경과 테이블별 의도를 설명하는 **참고 문서**이며, 실제 스키마의 정본(source of truth)은 `supabase/migrations/*.sql`이다. 스키마를 확인하거나 변경할 때는 반드시 마이그레이션 파일과 [DB 스키마 마이그레이션 가이드](guides/database-migrations.md)를 따를 것. 이 문서는 이후 실제 반영분과 조금씩 어긋날 수 있으므로 세부 컬럼/제약조건의 최종 확인은 마이그레이션 파일로 한다.
+>
+> Task 019 진행 중 원격을 실제 조회한 결과, 이 문서 작성 이후(Task 010~018 사이) 아래 항목들이 추가로 원격에 반영되어 있었다(이 문서에는 반영되지 않음 — 각 Task의 커밋 이력 참고):
+> - **문서화되지 않은 테이블 6개**: `job_collection_logs`/`news_collection_logs`(수집 성공/실패 로그), `user_llm_keys`(vault 연동, 사용자별 LLM API 키 저장), `llm_response_cache`(LLM 응답 캐시), `edge_function_error_logs`(Edge Function 에러 로그), `instruments`(Supabase 프로젝트 생성 시 기본 제공되는 퀵스타트 예제 테이블 — 앱 코드에서 전혀 참조되지 않는 미사용 테이블, 삭제 후보로 별도 검토 필요)
+> - **RPC 함수 4개**: `get_random_quiz_questions`(본 문서 5번 항목에 설명), `get_user_llm_key`/`set_user_llm_key`/`delete_user_llm_key`(vault 기반 LLM 키 CRUD, `anon` 역할 실행 권한 명시적 차단)
+> - **pg_cron 스케줄 4건**: `collect-job-postings-morning/evening`, `collect-tech-news-morning/evening` — 각각 하루 2회 Edge Function을 호출해 채용공고/기술뉴스를 자동 수집
+> - **storage 버킷 1개**: `documents`(비공개, PDF 10MiB 제한, Task 013 자소서/포트폴리오 첨삭 파이프라인용)
+>
+> 자세한 재현 과정과 검증 결과는 [Supabase 마이그레이션 파일화 트러블슈팅](troubleshooting/supabase-migration-baseline-troubleshooting.md) 참고.
+
 이 문서는 Supabase(Postgres) 테이블 스키마 설계안이다. **실제 마이그레이션 SQL 적용, RLS 정책 활성화, Auth 연동은 Task 009에서 수행**하며, 이 문서의 SQL은 어디까지나 참고용 예시일 뿐 실행하지 않는다.
 
 Supabase 프로젝트는 이미 생성되어 있다(`grow`, ref: `ciyscihtgpiikouxtblw`, region: `ap-northeast-2`). 다만 현재 상태가 `INACTIVE`(무료 티어 자동 일시정지로 추정)이므로, Task 009에서 마이그레이션을 적용하기 전에 Supabase 대시보드 또는 MCP `restore_project`로 재활성화가 필요하다.
