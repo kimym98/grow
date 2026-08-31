@@ -126,16 +126,17 @@
     - [x] 실패율 임계치 초과를 인위 재현했을 때 알림이 실제 발송됨 (job_collection_logs에 jobkorea failure 4건 seed → 재호출 시 edge_function_error_logs에 "소스 jobkorea 최근 실패율 40% (임계치 30% 초과, 표본 10건)" 알림 row 생성 확인)
     - [x] 소스 확장(Task 030) 시 그대로 재사용 가능한 공통 유틸로 분리됨 (`runCollectionSources`가 소스 목록/로그 테이블/upsert 콜백을 제네릭으로 주입받는 구조)
 
-- **Task 025: LLM 호출/프롬프트 로직 3중 복제 통합**
+- **Task 025: LLM 호출/프롬프트 로직 3중 복제 통합** ✅ (2026-09-01 완료)
   - PRD 참조: 2.5 / 우선순위: 중 / 선행 조건: Task 018
-  - `packages/shared/src/lib/llm/deno-entry.ts` Deno 호환 배럴 파일 신설 (확장자 포함 상대 경로만 사용)
-  - `supabase/functions/grade-short-answer/llm.ts`, `supabase/functions/review-document/llm.ts`의 복제본을 shared 재사용으로 교체
-  - **프롬프트 템플릿 단일 소스화를 최우선**으로 처리 (`buildDocumentReviewPrompt` 중복 제거)
-  - `electron/notification-trigger.ts`의 "shared와 동일 로직 복제본" 주석 패턴도 함께 정리 검토
+  - (변경) 당초 계획한 `packages/shared/src/lib/llm/deno-entry.ts` 배럴 방식 대신, 기존 `supabase/functions/_shared/` 컨벤션에 맞춰 `supabase/functions/_shared/llm-client.ts`를 신설해 Deno 쪽 두 복제본을 통합함 — packages/shared를 Deno에서 직접 import하면 zod/@supabase/supabase-js 등 불필요한 npm 의존성이 번들되는 리스크가 있어 기각
+  - `supabase/functions/grade-short-answer/llm.ts`, `supabase/functions/review-document/llm.ts`의 `fetchWithRetry`/JSON 파싱/Gemini·Anthropic REST 호출 복제본을 `_shared/llm-client.ts` 재사용으로 교체 완료
+  - `buildDocumentReviewPrompt`는 프롬프트 문자열을 한 글자도 바꾸지 않고 `review-document/llm.ts`에 유지, `packages/shared/prompt-templates.ts`와는 상호 참조 주석으로만 드리프트 방지 (완전한 단일 소스화는 미적용 — 필요 시 후속 태스크)
+  - `packages/shared/src/lib/llm/fetch-with-retry.ts`에 Deno 쪽 구현 위치를 알리는 상호 참조 주석 추가
+  - `electron/notification-trigger.ts`의 "shared와 동일 로직 복제본" 주석 패턴 정리는 별개 이슈로 범위 밖 처리(미착수)
   - 완료 기준
-    - [ ] 프롬프트 문자열이 저장소 내 단일 위치에만 존재
-    - [ ] 통합 후 `grade-short-answer`, `review-document` 실제 호출 응답이 통합 전과 동일
-    - [ ] `supabase functions serve` 로컬 실행 및 배포 성공
+    - [ ] 프롬프트 문자열이 저장소 내 단일 위치에만 존재 (미달성 — `packages/shared`와 `review-document/llm.ts` 두 곳에 동일 문자열 유지, 상호 참조 주석으로만 대응)
+    - [x] 통합 후 `grade-short-answer`, `review-document`의 요청/응답 스키마·에러 메시지·PROMPT_VERSION이 통합 전과 동일 (코드/`git diff` 비교로 확인 — index.ts 무변경, 프롬프트 문자열 diff 없음)
+    - [ ] `supabase functions serve` 로컬 실행 및 배포 성공 (미검증 — 로컬에 Deno CLI 미설치로 `deno check`/`functions serve` 실행 불가, 후속 확인 필요)
 
 - **Task 026: LLM 호출 타임아웃 누적 개선 및 워치독**
   - PRD 참조: 2.6 / 우선순위: 중 / 선행 조건: **Task 025** (통합된 단일 소스에 적용)
