@@ -325,19 +325,21 @@
     - [x] `review-document`와의 통합/분리 결정과 근거 문서화 — 위 "기존 review-document와의 관계 정리" 항목에 기록
     - [ ] Playwright MCP로 답변 작성 → 피드백 요청 → 결과 표시 → 재요청 캐시 동작 E2E 검증 — 로컬 supabase 스택 미기동으로 미수행. 원격 반영(`supabase db push` 또는 `mcp__supabase__apply_migration`) 및 `feedback-cover-letter-question` Edge Function 배포 후 별도 검증 필요
 
-- **Task 049: 지원 기업별 제출 서류(이력서/포트폴리오) 보관**
+- **Task 049: 지원 기업별 제출 서류(이력서/포트폴리오) 보관** - ✅ 완료 (2026-09-01)
   - PRD 참조: 2.10 / 우선순위: 중 / 선행 조건: **Task 045(도메인 스키마), Task 019(마이그레이션)**
-  - **기존 자산 재사용 검토 선행**: Task 019에서 마이그레이션에 편입된 `documents` 테이블과 `documents` storage 버킷이 이미 존재하므로, (a) 기존 `documents`에 `application_id` nullable 컬럼을 추가해 연결할지 (b) `application_documents` 연결 테이블을 신설해 다대다로 둘지 착수 전 결정 — 같은 이력서를 여러 기업에 제출하는 케이스가 있으므로 (b)가 유력
-  - 결정된 방식대로 마이그레이션 작성 및 storage 정책(경로 규칙, `user_id` 기반 접근 제어) 정합성 확인
-  - 지원 기업 상세에서 제출 서류 업로드/연결/해제, 제출일·버전 메모 표시, 다운로드/미리보기 경로 제공
-  - 기존 문서 첨삭(`document_reviews`) 결과가 있는 문서를 연결한 경우 첨삭 결과로 이동하는 링크 제공
+  - **기존 자산 재사용 결정**: Task 019에서 마이그레이션에 편입된 것은 `document_reviews` 테이블(이력서/포트폴리오 PDF 첨삭 레코드)과 `documents` storage 버킷(`{userId}/{documentReviewId}.pdf` 경로, RLS로 소유자 폴더만 접근 가능)이었음 — 별도의 "documents 테이블"은 존재하지 않았음(로드맵 초안의 표현을 착수 시점에 코드로 재확인해 정정). 로드맵이 유력하다고 명시한 (b)안 채택: 신규 `application_documents` 다대다 연결 테이블을 신설(`supabase/migrations/20260901050000_add_application_documents.sql`)해 `company_applications` ↔ `document_reviews`를 연결. 파일 업로드/스토리지 로직은 기존 `document-upload.ts::uploadDocument()`를 그대로 재사용(신규 storage 로직 없음)
+  - `cover_letter_questions`(Task 047)와 동일한 owner 기반 RLS 4정책(`TO PUBLIC`, `auth.uid() = user_id`) 패턴을 그대로 복제, `application_id`/`document_review_id` 양쪽 FK에 `ON DELETE CASCADE`, `UNIQUE(application_id, document_review_id)`로 동일 문서의 중복 연결을 DB 레벨에서 방지
+  - `packages/shared`에 `ApplicationDocument` 타입/zod스키마/매퍼 3종, `apps/desktop/lib/application-documents.ts`에 fetch/link(UNIQUE 위반 시 "이미 연결된 서류입니다" 메시지)/unlink/signed URL 발급 함수, `apps/desktop/components/sections/applications/application-documents-section.tsx`에 UI(새 서류 업로드+즉시연결, 기존 서류 Select 연결, 목록 다운로드/첨삭결과링크/연결해제)를 Task 045~048과 동일한 배치·네이밍으로 구현하고 `application-detail-content.tsx`에 통합
+  - 첨삭 결과 링크는 기존 `/documents?id={documentReviewId}` 쿼리 파라미터 라우팅(`documents-page-client.tsx`에서 이미 사용 중인 패턴)을 그대로 재사용, `document_reviews.status === 'completed'`일 때만 노출
+  - 지원 기업 삭제 시 처리 정책: `application_documents`만 CASCADE 삭제되고 `document_reviews`/storage 파일은 보존(다른 기업에도 연결되어 있을 수 있는 원본 자산이므로 삭제하지 않음) — SQL로 실제 삭제 후 동작 확인
   - 완료 기준
-    - [ ] 기존 `documents` 재사용 여부 결정과 근거가 문서에 기록됨
-    - [ ] 지원 기업에 서류를 업로드/연결하고 목록에서 확인 가능
-    - [ ] 하나의 문서를 복수 기업에 연결해도 중복 저장되지 않음(선택한 설계 기준 충족)
-    - [ ] 다른 사용자 계정에서 해당 파일에 접근 불가 (storage 정책 + RLS 검증)
-    - [ ] 지원 기업 삭제 시 파일·연결 레코드 처리 정책이 정해지고 동작함
-    - [ ] Playwright MCP로 업로드 → 연결 → 목록 노출 → 해제 E2E 검증
+    - [x] 기존 `documents` 재사용 여부 결정과 근거가 문서에 기록됨 — 위 "기존 자산 재사용 결정" 항목 참고(실제로는 `document_reviews`+storage 버킷 재사용, `application_documents` 연결 테이블 신설)
+    - [x] 지원 기업에 서류를 업로드/연결하고 목록에서 확인 가능 — `next dev`(localhost:3000, `qa-tester@example.com` 세션)에 Playwright MCP로 접속, "sdd" 지원 기업 상세에서 "새 서류 업로드"로 테스트 PDF 업로드 → "서류를 업로드하고 연결했습니다" 토스트 및 목록 즉시 반영 확인
+    - [x] 하나의 문서를 복수 기업에 연결해도 중복 저장되지 않음(선택한 설계 기준 충족) — `UNIQUE(application_id, document_review_id)` 제약으로 DB 레벨 보장(연결은 `application_documents` 행만 추가, `document_reviews`/파일은 그대로 공유)
+    - [x] 다른 사용자 계정에서 해당 파일에 접근 불가 (storage 정책 + RLS 검증) — 원격 DB에 타 계정 소유 `document_reviews` 5건이 이미 존재하는 상태에서, qa-tester 세션의 "기존 서류 연결" Select에 해당 5건이 전혀 노출되지 않음을 실제 UI로 확인(= `document_reviews`/`application_documents` RLS가 실제 인증 클라이언트 기준으로 정상 작동). 다만 두 번째 테스트 계정을 만들어 `application_documents` 자체에 대한 직접 크로스 계정 SELECT 시도까지는 수행하지 않음 — `execute_sql`(서비스 롤, RLS 우회)로 정책 존재만 구조적으로 확인
+    - [x] 지원 기업 삭제 시 파일·연결 레코드 처리 정책이 정해지고 동작함 — 임시 테스트 지원 기업·문서·연결을 생성한 뒤 지원 기업을 삭제, `application_documents` 0건(CASCADE 삭제)·`document_reviews` 1건 유지(보존)를 SQL로 확인 후 테스트 데이터 정리
+    - [x] Playwright MCP로 업로드 → 연결 → 목록 노출 → 해제 E2E 검증 — 위 시나리오에 이어 "다운로드"(signed URL 새 탭 오픈 확인) → "연결 해제"(`window.confirm` 승인 → "연결을 해제했습니다" 토스트 → 목록에서 제거)까지 전체 플로우를 실제 클릭으로 수행. **버그 발견 및 수정**: 최초 검증 시 React "duplicate key" 콘솔 에러가 반복 발생 — 처음에는 기존 코드의 무관한 이슈로 오판했으나, 재조사 결과 `application-detail-content.tsx`에서 형제 컴포넌트인 `CoverLetterQuestionsSection`과 신규 추가한 `ApplicationDocumentsSection`이 둘 다 `key={application.id}`를 그대로 사용해 key가 충돌한 것이 원인이었음(이번 Task에서 만든 회귀). `key={\`cover-letter-${application.id}\`}`/`key={\`documents-${application.id}\`}`로 각각 접두사를 붙여 수정, 이후 재검증 시 콘솔 에러 0건 확인
+  - **⚠️ 검증 범위 일부 제한**: 두 번째 실제 테스트 계정으로 `application_documents`/제출 서류 signed URL에 대한 직접 크로스 계정 접근 시도는 수행하지 않음 — `cover_letter_questions`와 동일한 RLS 정책 문구(구조적으로 Task 1에서 확인)와, 이번에 관찰된 `document_reviews` 크로스 계정 미노출(위 항목 참고)을 근거로 안전하다고 판단했으나 완전한 이중 계정 E2E는 후속 필요 시 별도 확인 권장
 
 ### Phase 5: 이력서/포트폴리오 첨삭 개선 (5단계)
 

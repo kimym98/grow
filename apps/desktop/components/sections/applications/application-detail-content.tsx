@@ -10,6 +10,7 @@ import { ApplicationStatusBadge } from "@/components/sections/applications/statu
 import { ApplicationFormDialog } from "@/components/sections/applications/application-form-dialog"
 import { CompanyAnalysisCard } from "@/components/sections/applications/company-analysis-card"
 import { CoverLetterQuestionsSection } from "@/components/sections/applications/cover-letter-questions-section"
+import { ApplicationDocumentsSection } from "@/components/sections/applications/application-documents-section"
 import { Button } from "@/components/ui/button"
 import { Dialog } from "@/components/ui/dialog"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
@@ -184,11 +185,13 @@ function ApplicationDetailContent({ application, onUpdated, onDeleted }: Applica
       />
 
       <CoverLetterQuestionsSection
-        key={application.id}
+        key={`cover-letter-${application.id}`}
         applicationId={application.id}
         companyAnalysisStatus={analysis?.status ?? null}
         feedbackProvider={availableProviders[0] ?? null}
       />
+
+      <ApplicationDocumentsSection key={`documents-${application.id}`} applicationId={application.id} />
 
       <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
         {isEditOpen ? (
