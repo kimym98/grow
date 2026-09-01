@@ -1,17 +1,22 @@
 "use client"
 
-import { useState } from "react"
+import { useCallback, useEffect, useRef, useState } from "react"
 import Link from "next/link"
 import { toast } from "sonner"
-import type { CompanyApplication, CompanyApplicationStatus } from "@app/shared"
+import type { CompanyAnalysis, CompanyApplication, CompanyApplicationStatus } from "@app/shared"
 
 import { STATUS_OPTIONS } from "@/components/sections/applications/application-filters"
 import { ApplicationStatusBadge } from "@/components/sections/applications/status-badge"
 import { ApplicationFormDialog } from "@/components/sections/applications/application-form-dialog"
+import { CompanyAnalysisCard } from "@/components/sections/applications/company-analysis-card"
 import { Button } from "@/components/ui/button"
 import { Dialog } from "@/components/ui/dialog"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { deleteCompanyApplication, updateCompanyApplication } from "@/lib/company-applications"
+import { fetchCompanyAnalysis, triggerCompanyAnalysis } from "@/lib/company-analyses"
+import { fetchLlmKeyStatuses, type LlmProviderName } from "@/lib/llm-keys"
+
+const ANALYSIS_POLL_INTERVAL_MS = 4000
 
 interface ApplicationDetailContentProps {
   application: CompanyApplication
@@ -23,6 +28,63 @@ function ApplicationDetailContent({ application, onUpdated, onDeleted }: Applica
   const [isEditOpen, setIsEditOpen] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
   const [isStatusUpdating, setIsStatusUpdating] = useState(false)
+
+  const [analysis, setAnalysis] = useState<CompanyAnalysis | null>(null)
+  const [availableProviders, setAvailableProviders] = useState<LlmProviderName[]>([])
+  const [isTriggeringAnalysis, setIsTriggeringAnalysis] = useState(false)
+  const analysisPollTimerRef = useRef<ReturnType<typeof setInterval> | null>(null)
+
+  const loadAnalysis = useCallback(async () => {
+    try {
+      setAnalysis(await fetchCompanyAnalysis(application.id))
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "기업 분석 결과를 불러오지 못했습니다")
+    }
+  }, [application.id])
+
+  // 지원 기업이 바뀔 때(상세 선택 전환)마다 최신 분석 결과와 등록된 provider 목록을 다시 조회한다
+  useEffect(() => {
+    loadAnalysis()
+    fetchLlmKeyStatuses()
+      .then((statuses) => setAvailableProviders(statuses.map((status) => status.provider)))
+      .catch(() => setAvailableProviders([]))
+  }, [loadAnalysis])
+
+  // 분석이 진행 중일 때만 완료/실패로 바뀔 때까지 주기적으로 다시 조회한다
+  useEffect(() => {
+    const isInFlight = analysis?.status === "processing"
+
+    if (isInFlight && !analysisPollTimerRef.current) {
+      analysisPollTimerRef.current = setInterval(loadAnalysis, ANALYSIS_POLL_INTERVAL_MS)
+    } else if (!isInFlight && analysisPollTimerRef.current) {
+      clearInterval(analysisPollTimerRef.current)
+      analysisPollTimerRef.current = null
+    }
+
+    return () => {
+      if (analysisPollTimerRef.current) {
+        clearInterval(analysisPollTimerRef.current)
+        analysisPollTimerRef.current = null
+      }
+    }
+  }, [analysis?.status, loadAnalysis])
+
+  async function handleTriggerAnalysis() {
+    if (availableProviders.length === 0) {
+      toast.error("먼저 설정에서 LLM API 키를 등록해주세요")
+      return
+    }
+
+    setIsTriggeringAnalysis(true)
+    try {
+      await triggerCompanyAnalysis(application.id, availableProviders[0])
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "기업 분석 요청에 실패했습니다")
+    } finally {
+      await loadAnalysis()
+      setIsTriggeringAnalysis(false)
+    }
+  }
 
   async function handleStatusChange(status: CompanyApplicationStatus) {
     setIsStatusUpdating(true)
@@ -111,6 +173,14 @@ function ApplicationDetailContent({ application, onUpdated, onDeleted }: Applica
           삭제
         </Button>
       </div>
+
+      <CompanyAnalysisCard
+        application={application}
+        analysis={analysis}
+        isTriggering={isTriggeringAnalysis}
+        canRetry={availableProviders.length > 0}
+        onTrigger={handleTriggerAnalysis}
+      />
 
       <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
         {isEditOpen ? (
