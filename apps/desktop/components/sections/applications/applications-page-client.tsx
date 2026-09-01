@@ -90,7 +90,7 @@ function ApplicationsPageClient() {
   return (
     <>
     <ListDetailPanel
-      className="h-full md:grid-cols-[1fr_1fr]"
+      className="h-full md:grid-cols-[1fr_2fr]"
       showDetail={!!selectedApplication}
       onBack={() => setSelectedId(null)}
       list={

@@ -82,3 +82,16 @@ export const companyApplicationFormSchema = z.object({
 })
 
 export type CompanyApplicationFormValues = z.infer<typeof companyApplicationFormSchema>
+
+export const coverLetterQuestionFormSchema = z.object({
+  questionText: z.string().min(1, "문항을 입력해주세요"),
+  charLimit: z.string().optional(),
+})
+
+export type CoverLetterQuestionFormValues = z.infer<typeof coverLetterQuestionFormSchema>
+
+export const coverLetterAnswerSchema = z.object({
+  answerText: z.string(),
+})
+
+export type CoverLetterAnswerFormValues = z.infer<typeof coverLetterAnswerSchema>

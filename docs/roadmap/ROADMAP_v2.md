@@ -291,18 +291,19 @@
     - [x] LLM 실패 시 `failed` 상태와 재시도 경로가 UI에 노출됨 — 2026-09-01, 가짜 Gemini 키로 실제 호출 시 `500 ANALYSIS_FAILED` + DB `status='failed'`+`error_message` 저장 및 `edge_function_error_logs` 기록을 `psql`로 확인, `CompanyAnalysisCard`의 failed 분기(에러 메시지+재시도 버튼+API 키 안내)로 UI 노출 확인
     - [x] Playwright MCP로 지원 기업 상세 → 분석 실행 → 결과 표시 → 새로고침 재분석 플로우 검증 — 2026-09-01, 최초 검증 시점에는 원격 프로덕션 Supabase에 마이그레이션이 미반영되어 있고 Next.js 16 dev 서버 단일 인스턴스 락으로 로컬 스택 기반 브라우저 E2E가 불가해 HTTP 계층 대체 검증만 수행했으나(경위: `docs/troubleshooting/company-analysis-e2e-troubleshooting.md`), 이후 사용자가 `npx supabase db push`로 원격에 마이그레이션을 반영하고(`supabase migration list`로 `20260901020000` 반영 확인) `npx supabase functions deploy analyze-company`로 Edge Function을 배포, 본인 Gemini API 키를 `/settings`에 등록한 뒤 재검증 완료. Playwright MCP로 실행 중이던 원격 연결 `next dev`(포트 3000, `qa-tester@example.com` 세션)에서 지원 기업 "그로우테스트" 신규 등록 → 상세 진입(등록 직후 `company_analyses` 스키마 캐시 오류 없음 확인) → "분석 실행" 클릭 → 실제 Gemini 호출로 요약/조직문화 적합성/사업 도메인/기술 스택/예상 질문 5개 항목이 정상 렌더링됨(브라우저 콘솔 에러 0건) → "새로고침 재분석" 클릭 시 동일 입력이라 캐시 히트로 즉시 동일 결과 재표시(재호출 없음) → 테스트 데이터(지원 기업+연쇄 삭제된 분석 결과) 정리 완료
 
-- **Task 047: 자소서 문항 등록·관리**
+- **Task 047: 자소서 문항 등록·관리** - ✅ 완료 (2026-09-01)
   - PRD 참조: 2.10 / 우선순위: 중 / 선행 조건: **Task 045(도메인 스키마), Task 019(마이그레이션)**
-  - `cover_letter_questions` 테이블 신설 (`id`, `user_id`, `application_id`, 문항 순서, 문항 내용, 글자수 제한, 답변 본문, `updated_at`) — 마이그레이션 파일로 관리, `user_id` RLS 적용
-  - 지원 기업 상세 하위에 문항 목록/추가/수정/삭제 UI 구현 (순서 변경 포함 여부는 구현 시 결정)
-  - 답변 작성 에디터: 글자수 카운터 + 제한 초과 경고, 자동 저장 또는 명시적 저장 여부 결정
+  - `cover_letter_questions` 테이블 신설 (`id`, `user_id`, `application_id`, 문항 순서, 문항 내용, 글자수 제한, 답변 본문, `updated_at`) — 마이그레이션 파일로 관리 (`supabase/migrations/20260901030000_add_cover_letter_questions.sql`), `application_id`는 `company_applications(id)` 참조 `ON DELETE CASCADE`(Task 046 `company_analyses` 선례 채택), `user_id` RLS 4정책 적용
+  - 지원 기업 상세 하위에 문항 목록/추가/삭제 UI 구현 (`cover-letter-questions-section.tsx`, `cover-letter-question-form-dialog.tsx`). 순서는 등록 순 자동 append만 지원하고 드래그앤드롭 순서 변경은 범위 제외(YAGNI)로 결정
+  - 답변 작성 에디터: 문항 카드 내 인라인 Textarea + 실시간 글자수 카운터 + 제한 초과 시 경고 스타일(`text-destructive`), 자동저장이 아닌 명시적 "저장" 버튼(Loader2 로딩 표시) 방식으로 결정
   - **범위 제한**: 문항·답변의 저장·관리까지만. LLM 피드백은 Task 048에서 처리
   - 완료 기준
-    - [ ] 하나의 지원 기업에 복수 문항을 등록·수정·삭제할 수 있음
-    - [ ] 답변 본문이 저장되고 재진입 시 그대로 복원됨
-    - [ ] 글자수 제한 설정 시 카운터·초과 경고가 정상 동작
-    - [ ] 지원 기업 삭제 시 연결된 문항의 처리 정책(cascade 또는 soft delete)이 정해지고 동작함
-    - [ ] Playwright MCP로 문항 추가 → 답변 작성 → 저장 → 재진입 복원 E2E 검증
+    - [x] 하나의 지원 기업에 복수 문항을 등록·삭제할 수 있음 — 2026-09-01, 원격 연결 `next dev`(localhost:3000, `qa-tester@example.com` 세션)에 Playwright MCP로 접속, `/applications`에서 "자소서테스트기업" 신규 등록 → 상세 진입 시 "자소서 문항" 섹션이 빈 상태로 정상 렌더링됨을 확인 → "문항 추가" 다이얼로그로 "지원 동기를 작성해주세요"(글자수 제한 20) 등록 → 목록에 즉시 반영 확인 → 문항 카드의 "삭제" 버튼 클릭 → `window.confirm` 확인 후 목록에서 제거 및 "등록된 자소서 문항이 없습니다" 안내로 복귀
+    - [x] 답변 본문이 저장되고 재진입 시 그대로 복원됨 — 같은 세션에서 문항을 다시 추가한 뒤 답변 Textarea에 "저는 이 회사의 비전과 기술 스택에 깊이 공감하여 지원하게 되었습니다."(39자) 입력 → "저장" 클릭 → "답변을 저장했습니다" 토스트 확인 → 다른 지원 기업("sdd")으로 전환 후 "자소서테스트기업"으로 재선택 → 동일 답변 텍스트가 그대로 복원됨을 스냅샷으로 확인(컴포넌트에 `key={application.id}`를 부여해 지원 기업 전환 시 섹션 로컬 상태가 올바르게 초기화되도록 구현)
+    - [x] 글자수 제한 설정 시 카운터·초과 경고가 정상 동작 — 위 39자 답변 입력 시 글자수 제한 20자를 초과해 카운터가 "39 / 20자 · 글자수 제한을 초과했습니다"로 실시간 갱신되고 `text-destructive` 경고 스타일이 적용됨을 확인
+    - [x] 지원 기업 삭제 시 연결된 문항이 `ON DELETE CASCADE`로 함께 삭제됨 — "CASCADE 삭제 검증용 문항"을 추가한 뒤 `mcp__supabase__execute_sql`로 `application_id`(`29f9ecff-da66-40c0-9ccc-83b535a2db81`)에 문항 1건이 존재함을 먼저 확인 → UI에서 지원 기업 "삭제" 버튼(`window.confirm`) 클릭 → 삭제 직후 동일 `application_id` 기준 재조회 시 `company_applications` 0건, `cover_letter_questions` 0건으로 함께 삭제됨을 SQL로 확인
+    - [x] Playwright MCP로 문항 추가 → 답변 작성 → 저장 → 재진입 복원 E2E 검증 — 위 시나리오 전 과정을 원격 연결 `next dev`(`ciyscihtgpiikouxtblw` 프로젝트, Task 1에서 `mcp__supabase__apply_migration`으로 `20260901030000_add_cover_letter_questions.sql` 반영 완료)에서 Playwright MCP로 직접 수행. `browser_console_messages`(전체 세션 조회 기준) 콘솔 에러 0건
+  - **후속 개선 (2026-09-01)**: 문항·답변 내용이 길어 상세 패널이 좁게 느껴진다는 피드백에 따라 `applications-page-client.tsx`의 `ListDetailPanel` 목록:상세 비율을 `1fr:1fr`에서 `1fr:2fr`로 조정, 상세 영역을 더 넓게 노출
 
 - **Task 048: 기업 분석 기반 자소서 피드백**
   - PRD 참조: 2.10 (+ 2.11 첨삭 로직 공유) / 우선순위: 중 / 선행 조건: **Task 046(기업 분석 결과), Task 047(문항·답변), Task 025(LLM 통합), Task 027(해시 캐시)**, (권장) **Task 036(첨삭 프롬프트 개선)**

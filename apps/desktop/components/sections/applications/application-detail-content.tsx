@@ -9,6 +9,7 @@ import { STATUS_OPTIONS } from "@/components/sections/applications/application-f
 import { ApplicationStatusBadge } from "@/components/sections/applications/status-badge"
 import { ApplicationFormDialog } from "@/components/sections/applications/application-form-dialog"
 import { CompanyAnalysisCard } from "@/components/sections/applications/company-analysis-card"
+import { CoverLetterQuestionsSection } from "@/components/sections/applications/cover-letter-questions-section"
 import { Button } from "@/components/ui/button"
 import { Dialog } from "@/components/ui/dialog"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
@@ -181,6 +182,8 @@ function ApplicationDetailContent({ application, onUpdated, onDeleted }: Applica
         canRetry={availableProviders.length > 0}
         onTrigger={handleTriggerAnalysis}
       />
+
+      <CoverLetterQuestionsSection key={application.id} applicationId={application.id} />
 
       <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
         {isEditOpen ? (
