@@ -3,10 +3,11 @@ import "@supabase/functions-js/edge-runtime.d.ts"
 import { withSupabase } from "@supabase/server"
 
 import { runCollectionSources } from "../_shared/collection-runner.ts"
+import { careerSource } from "./sources/career.ts"
 import { jobkoreaSource } from "./sources/jobkorea.ts"
 import type { JobPostingSource } from "./types.ts"
 
-const sources: JobPostingSource[] = [jobkoreaSource]
+const sources: JobPostingSource[] = [jobkoreaSource, careerSource]
 
 export default {
   fetch: withSupabase({ auth: ["secret"] }, async (_req, ctx) => {

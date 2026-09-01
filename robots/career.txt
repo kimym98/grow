@@ -1,0 +1,25 @@
+# robots.txt for https://job.career.co.kr/
+# 주의: www.career.co.kr(메인 도메인)이 아니라 서브도메인 job.career.co.kr 기준이다.
+#       실제 채용정보 목록/상세는 www가 아닌 job.career.co.kr에서 서빙됨을 실측 확인함(2026-09-01).
+# Snapshot fetched: 2026-09-01
+
+User-agent: *
+
+Disallow: /admin
+Disallow: /app
+Disallow: /base
+Disallow: /biz
+Disallow: /user
+Disallow: /signup
+
+User-agent: Sogou web spider
+User-agent: PetalBot
+Disallow: /
+
+User-agent: duckduckbot
+Disallow: /
+
+User-agent: ia_archiver
+Disallow: /
+
+sitemap : http://job.career.co.kr/sitemap.xml
