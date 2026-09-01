@@ -275,21 +275,21 @@
     - [x] 다른 사용자 계정에서 해당 지원 기업이 조회되지 않음 — 2026-09-01 로컬 Supabase DB(`supabase_db_grow` 컨테이너)에서 SQL 스크립트로 검증. `auth.users`에 임시 계정 A/B(uuid `1111...`/`2222...`)를 각각 만들고 `company_applications`에 A/B 소유 레코드를 1건씩 생성한 뒤, 트랜잭션 내에서 `set local role authenticated; set local request.jwt.claims = '{"sub":"<uuid>"}'`로 세션을 흉내내 검증. 결과: A 세션 `SELECT`에서 B 레코드 미노출(1건만 반환), A가 B 레코드에 시도한 `UPDATE`/`DELETE`는 각각 영향 행 0건(`UPDATE 0`/`DELETE 0`), B 세션에서 재조회 시 B 레코드는 변조 없이 그대로 존재 — RLS 4정책(owner_select/insert/update/delete) 정상 동작 확인. 검증 후 트랜잭션을 `ROLLBACK`하여 임시 데이터는 남기지 않음(별도 정리 불필요). 스크립트는 재현용으로만 scratchpad에 보관, 저장소에는 커밋하지 않음. ⚠️ `psql` CLI 미설치로 계획한 `supabase-js` 단위 테스트 대신 로컬 DB 컨테이너에 직접 SQL을 실행하는 방식으로 대체
     - [x] Playwright MCP로 등록 → 상태 변경 → 목록 필터 반영 E2E 검증 — 2026-09-01, 이미 실행 중이던 `npm run dev`(localhost:3000)에 Playwright MCP로 접속, 테스트 계정(`qa-tester@example.com`) 세션으로 `/applications` 진입 → "(주)테스트기업"/"백엔드 개발자" 등록 → 목록·상세 반영 확인 → 상세에서 상태를 "서류제출"로 변경 → 목록 배지 즉시 갱신 확인 → 상태 필터를 "서류제출"로 설정해 항목 노출, "준비중"으로 변경해 항목 은닉 확인 → 삭제 버튼으로 항목 제거 및 목록에서 사라짐 확인. 전 과정 브라우저 콘솔 에러/경고 0건(`browser_console_messages` 전체 세션 조회 기준)
 
-- **Task 046: 지원 기업 LLM 분석 (`analyze-company`)**
+- **Task 046: 지원 기업 LLM 분석 (`analyze-company`)** - ✅ 완료 (2026-09-01)
   - PRD 참조: 2.10 / 우선순위: 중 / 선행 조건: **Task 045(도메인 스키마), Task 019(마이그레이션), Task 025(LLM 통합), Task 027(해시 캐시)**
-  - `company_analyses` 테이블 신설 (`id`, `user_id`, `application_id`(`company_applications` 참조), 분석 요약, 인재상/사업 영역/기술 스택, 예상 질문, 입력 스냅샷, 캐시 키 해시, 생성일시) — 마이그레이션 파일로 관리
+  - `company_analyses` 테이블 신설 (`id`, `user_id`, `application_id`(`company_applications` 참조), 분석 요약, 인재상/사업 영역/기술 스택, 예상 질문, 입력 스냅샷, 캐시 키 해시, 생성일시) — 마이그레이션 파일로 관리 (`supabase/migrations/20260901020000_add_company_analyses.sql`)
   - `analyze-company` Edge Function 구현 — `supabase/functions/_shared/llm-client.ts`(Task 025 통합본) 재사용, 사용자 등록 LLM API 키(`user_llm_keys`) 경유
   - `user_id` 기반 RLS 적용 (`llm-cache.ts`의 크로스토크 방지 원칙 동일 적용 — A의 키로 만든 결과를 B가 소비 불가)
   - 캐시 키 = `hashPromptTemplate(프롬프트 템플릿)`(Task 027 유틸 그대로 재사용) + **분석 입력 스냅샷 해시**(기업명·직무·사용자 입력 메모 등). 입력이 바뀌면 자동 무효화, 동일 입력이면 캐시 히트
   - (선택) 자체 수집 공고(`job_postings`)에 동일 기업 공고가 있으면 정규화 키로 매칭해 분석 컨텍스트에 보강 — 매칭 실패해도 사용자 입력만으로 분석이 성립해야 함(하드 의존 금지)
   - 지원 기업 상세 화면에 "기업 분석" 탭/액션, 캐시 결과 표시 + 수동 새로고침 재분석, `processing`/`failed` 상태와 재시도 경로 노출(Task 026 워치독·재시도 UI 패턴 준용)
   - 완료 기준
-    - [ ] 사용자가 등록한 지원 기업에 대해 분석 결과가 생성되고 재조회 시 캐시가 히트
-    - [ ] 서로 다른 사용자 계정 간 캐시·분석 결과가 공유되지 않음 (RLS 검증)
-    - [ ] 분석 입력(기업명/직무/메모) 변경 시 입력 스냅샷 해시 변경으로 캐시가 자동 무효화
-    - [ ] 프롬프트 템플릿 문구만 수정해도 캐시가 자동 무효화됨 (Task 027 방식 검증)
-    - [ ] LLM 실패 시 `failed` 상태와 재시도 경로가 UI에 노출됨
-    - [ ] Playwright MCP로 지원 기업 상세 → 분석 실행 → 결과 표시 → 새로고침 재분석 플로우 검증
+    - [x] 사용자가 등록한 지원 기업에 대해 분석 결과가 생성되고 재조회 시 캐시가 히트 — 2026-09-01, 로컬 스택에서 `llm_response_cache`에 사전 계산한 캐시 키로 결과를 심어둔 뒤(무효한 가짜 LLM 키로) `analyze-company` 호출 시 실제 호출 없이 `200 completed`가 즉시(~150ms) 반환되고 저장 결과가 캐시 값과 정확히 일치함을 확인(상세: `docs/troubleshooting/company-analysis-e2e-troubleshooting.md`)
+    - [x] 서로 다른 사용자 계정 간 캐시·분석 결과가 공유되지 않음 (RLS 검증) — 2026-09-01, 로컬 Supabase DB에서 임시 계정 A/B로 Task 045와 동일한 트랜잭션 시뮬레이션(`SET LOCAL request.jwt.claims`) 수행. A가 B의 `company_analyses` 레코드에 시도한 `UPDATE`/`DELETE`는 각각 0건, B 세션 재조회 시 원본 그대로 존재. `ROLLBACK`으로 정리. 경미한 부가 발견은 각주 참고(상세: `docs/troubleshooting/company-analysis-e2e-troubleshooting.md`)
+    - [x] 분석 입력(기업명/직무/메모) 변경 시 입력 스냅샷 해시 변경으로 캐시가 자동 무효화 — 2026-09-01, 동일 applicationId에서 `memo`만 변경 후 재호출하면 cache_key가 달라져 캐시를 타지 않고 실제 LLM 호출을 시도해(가짜 키라 500) 실증(상세: `docs/troubleshooting/company-analysis-e2e-troubleshooting.md`)
+    - [x] 프롬프트 템플릿 문구만 수정해도 캐시가 자동 무효화됨 (Task 027 방식 검증) — `cacheKey`에 `hashPromptTemplate(COMPANY_ANALYSIS_PROMPT_TEMPLATE)` 포함, review-document와 동일한 순수 해시 메커니즘이라 코드 레벨로 확인(상세: `docs/troubleshooting/company-analysis-e2e-troubleshooting.md`)
+    - [x] LLM 실패 시 `failed` 상태와 재시도 경로가 UI에 노출됨 — 2026-09-01, 가짜 Gemini 키로 실제 호출 시 `500 ANALYSIS_FAILED` + DB `status='failed'`+`error_message` 저장 및 `edge_function_error_logs` 기록을 `psql`로 확인, `CompanyAnalysisCard`의 failed 분기(에러 메시지+재시도 버튼+API 키 안내)로 UI 노출 확인
+    - [x] Playwright MCP로 지원 기업 상세 → 분석 실행 → 결과 표시 → 새로고침 재분석 플로우 검증 — 2026-09-01, 최초 검증 시점에는 원격 프로덕션 Supabase에 마이그레이션이 미반영되어 있고 Next.js 16 dev 서버 단일 인스턴스 락으로 로컬 스택 기반 브라우저 E2E가 불가해 HTTP 계층 대체 검증만 수행했으나(경위: `docs/troubleshooting/company-analysis-e2e-troubleshooting.md`), 이후 사용자가 `npx supabase db push`로 원격에 마이그레이션을 반영하고(`supabase migration list`로 `20260901020000` 반영 확인) `npx supabase functions deploy analyze-company`로 Edge Function을 배포, 본인 Gemini API 키를 `/settings`에 등록한 뒤 재검증 완료. Playwright MCP로 실행 중이던 원격 연결 `next dev`(포트 3000, `qa-tester@example.com` 세션)에서 지원 기업 "그로우테스트" 신규 등록 → 상세 진입(등록 직후 `company_analyses` 스키마 캐시 오류 없음 확인) → "분석 실행" 클릭 → 실제 Gemini 호출로 요약/조직문화 적합성/사업 도메인/기술 스택/예상 질문 5개 항목이 정상 렌더링됨(브라우저 콘솔 에러 0건) → "새로고침 재분석" 클릭 시 동일 입력이라 캐시 히트로 즉시 동일 결과 재표시(재호출 없음) → 테스트 데이터(지원 기업+연쇄 삭제된 분석 결과) 정리 완료
 
 - **Task 047: 자소서 문항 등록·관리**
   - PRD 참조: 2.10 / 우선순위: 중 / 선행 조건: **Task 045(도메인 스키마), Task 019(마이그레이션)**
