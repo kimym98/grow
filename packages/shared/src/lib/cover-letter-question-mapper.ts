@@ -12,6 +12,10 @@ export function rowToCoverLetterQuestion(row: CoverLetterQuestionRow): CoverLett
     questionText: row.question_text,
     charLimit: row.char_limit,
     answerText: row.answer_text,
+    feedbackStatus: row.feedback_status,
+    feedbackText: row.feedback_text,
+    feedbackErrorMessage: row.feedback_error_message,
+    feedbackGeneratedAt: row.feedback_generated_at,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   }

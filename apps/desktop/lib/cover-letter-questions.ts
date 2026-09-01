@@ -6,6 +6,7 @@ import {
 } from "@app/shared"
 
 import { supabase } from "@/lib/supabase"
+import type { LlmProviderName } from "@/lib/llm-keys"
 
 type CoverLetterQuestionCreateInput = Pick<CoverLetterQuestion, "questionText" | "charLimit">
 type CoverLetterQuestionUpdateInput = Partial<
@@ -79,4 +80,27 @@ export async function deleteCoverLetterQuestion(id: string): Promise<void> {
   const { error } = await supabase.from("cover_letter_questions").delete().eq("id", id)
 
   if (error) throw new Error(error.message)
+}
+
+async function extractFunctionErrorMessage(error: unknown): Promise<string> {
+  if (error && typeof error === "object" && "context" in error) {
+    const context = (error as { context?: unknown }).context
+    if (context instanceof Response) {
+      const body = await context.json().catch(() => null)
+      if (body?.message) return body.message as string
+    }
+  }
+  return error instanceof Error ? error.message : "자소서 문항 첨삭 요청에 실패했습니다"
+}
+
+/** feedback-cover-letter-question Edge Function을 호출해 기업 맞춤 첨삭을 시작시킨다 (비동기로 진행되며 feedback_status를 폴링해 확인) */
+export async function requestCoverLetterQuestionFeedback(
+  questionId: string,
+  provider: LlmProviderName
+): Promise<void> {
+  const { error } = await supabase.functions.invoke("feedback-cover-letter-question", {
+    body: { questionId, provider },
+  })
+
+  if (error) throw new Error(await extractFunctionErrorMessage(error))
 }

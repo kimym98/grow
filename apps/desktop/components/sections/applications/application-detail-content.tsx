@@ -183,7 +183,12 @@ function ApplicationDetailContent({ application, onUpdated, onDeleted }: Applica
         onTrigger={handleTriggerAnalysis}
       />
 
-      <CoverLetterQuestionsSection key={application.id} applicationId={application.id} />
+      <CoverLetterQuestionsSection
+        key={application.id}
+        applicationId={application.id}
+        companyAnalysisStatus={analysis?.status ?? null}
+        feedbackProvider={availableProviders[0] ?? null}
+      />
 
       <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
         {isEditOpen ? (

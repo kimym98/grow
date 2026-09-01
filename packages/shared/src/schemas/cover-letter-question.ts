@@ -12,6 +12,10 @@ export const coverLetterQuestionSchema = z.object({
   questionText: z.string().min(1),
   charLimit: z.number().nullable(),
   answerText: z.string().nullable(),
+  feedbackStatus: z.enum(["idle", "processing", "completed", "failed"]),
+  feedbackText: z.string().nullable(),
+  feedbackErrorMessage: z.string().nullable(),
+  feedbackGeneratedAt: z.string().nullable(),
   createdAt: z.string(),
   updatedAt: z.string(),
 })

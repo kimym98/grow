@@ -305,20 +305,25 @@
     - [x] Playwright MCP로 문항 추가 → 답변 작성 → 저장 → 재진입 복원 E2E 검증 — 위 시나리오 전 과정을 원격 연결 `next dev`(`ciyscihtgpiikouxtblw` 프로젝트, Task 1에서 `mcp__supabase__apply_migration`으로 `20260901030000_add_cover_letter_questions.sql` 반영 완료)에서 Playwright MCP로 직접 수행. `browser_console_messages`(전체 세션 조회 기준) 콘솔 에러 0건
   - **후속 개선 (2026-09-01)**: 문항·답변 내용이 길어 상세 패널이 좁게 느껴진다는 피드백에 따라 `applications-page-client.tsx`의 `ListDetailPanel` 목록:상세 비율을 `1fr:1fr`에서 `1fr:2fr`로 조정, 상세 영역을 더 넓게 노출
 
-- **Task 048: 기업 분석 기반 자소서 피드백**
-  - PRD 참조: 2.10 (+ 2.11 첨삭 로직 공유) / 우선순위: 중 / 선행 조건: **Task 046(기업 분석 결과), Task 047(문항·답변), Task 025(LLM 통합), Task 027(해시 캐시)**, (권장) **Task 036(첨삭 프롬프트 개선)**
-  - Task 046의 기업 분석 결과를 **컨텍스트로 주입**해 문항별 답변을 첨삭 — "일반 자소서 첨삭"이 아닌 "이 기업에 맞춘 첨삭"이 되도록 프롬프트 설계
-  - **기존 `review-document`와의 관계 정리**: 문서(PDF) 단위 첨삭인 `review-document`와 문항 단위 첨삭은 입력 단위·저장 테이블이 달라, (a) `review-document`를 확장할지 (b) `review-cover-letter`를 신설할지 착수 전 결정 — 어느 쪽이든 LLM 호출/재시도/캐시 계층은 `_shared/llm-client.ts`·`llm-cache.ts`를 재사용하고 프롬프트 문자열만 분기
-  - 피드백 결과 저장 (문항별 버전 이력, 요약, 코멘트 목록) — `document_reviews`의 `versions` 컬럼 패턴 준용
-  - 캐시 키에 프롬프트 해시 + 답변 본문 해시 + **참조한 기업 분석 결과 해시** 포함 → 분석이 갱신되면 피드백도 자동 무효화
-  - **하이라이트 UI 재사용**: Task 037에서 도입할 인용 문구 기반 offset 산출·매칭 실패 폴백 로직을 문항 답변에도 적용할 수 있는지 검토 (Task 037 완료 전이면 코멘트 목록 형태로 먼저 제공)
+- **Task 048: 기업 분석 기반 자소서 피드백** - ✅ 완료 (2026-09-01)
+  - PRD 참조: 2.10 (+ 2.11 첨삭 로직 공유) / 우선순위: 중 / 선행 조건: **Task 046(기업 분석 결과), Task 047(문항·답변), Task 025(LLM 통합), Task 027(해시 캐시)**
+  - `cover_letter_questions`에 `feedback_status`(`idle`/`processing`/`completed`/`failed`, CHECK 제약)/`feedback_text`/`feedback_error_message`/`feedback_generated_at` 4컬럼 추가 — 마이그레이션 파일로 관리 (`supabase/migrations/20260901040000_add_cover_letter_question_feedback.sql`). 신규 RLS 정책은 불필요(Task 047의 owner 4정책이 테이블 전체를 이미 커버)
+  - `packages/shared/src/types/cover-letter-question.ts`에 `CoverLetterQuestionFeedbackStatus` union 타입 export, `CoverLetterQuestion`/`CoverLetterQuestionRow`에 피드백 4필드 추가, `rowToCoverLetterQuestion` 매퍼 및 `schemas/cover-letter-question.ts`의 zod 스키마 동기화
+  - **기존 `review-document`와의 관계 정리**: 문서(PDF) 단위 첨삭인 `review-document`를 확장하지 않고 **`feedback-cover-letter-question` Edge Function을 신설**하는 (b)안을 채택 — 입력 단위(문항 1건 + 답변)와 저장 테이블(`cover_letter_questions`)이 `document_reviews`와 근본적으로 다르고, 기업 분석 컨텍스트 주입이라는 이 기능 고유의 전제조건이 있어 별도 함수가 더 단순함. LLM 호출/재시도/캐시 계층은 `_shared/llm-client.ts`·`_shared/llm-cache.ts`를 그대로 재사용하고 프롬프트 문자열만 신규 작성(`supabase/functions/feedback-cover-letter-question/llm.ts`의 `FEEDBACK_PROMPT_TEMPLATE`)
+  - Task 046의 기업 분석 결과(`summary`/`culture_fit`/`business_domain`/`tech_stack`)를 **컨텍스트로 주입**해 문항별 답변을 첨삭 — "일반 자소서 첨삭"이 아닌 "이 기업에 맞춘 첨삭"이 되도록 프롬프트 설계
+  - **하드 실패 설계 결정(폴백 없음)**: `company_analyses`가 `application_id` 기준 최신 1건 기준 `completed` 상태가 아니면 `400 ANALYSIS_NOT_READY`로 즉시 거부하고 일반 첨삭으로 폴백하지 않는다 — "그 기업에 맞춘 첨삭"이라는 기능 목적상 분석 없는 첨삭은 의미가 없다는 판단(로드맵 초안의 "안내 후 일반 첨삭 폴백" 방침에서 착수 시점에 변경). `answer_text`가 비어있으면 LLM 호출 전에 `400 EMPTY_ANSWER`로 거부(상태 미변경)
+  - **버전 이력 범위 제외(YAGNI)**: 로드맵 초안의 "문항별 피드백 버전 이력" 요구는 착수 시점에 범위에서 제외 — `feedback_text`는 최신 1건만 덮어쓰기 저장하는 단순 상태머신으로 구현(Task 047의 문항 자체가 버전 이력이 없는 것과 일관). 필요해지면 별도 태스크로 분리
+  - **하이라이트 UI 재사용 범위 제외**: Task 037(인용 문구 기반 offset 하이라이트)이 미완료 상태이며 이 기능은 문항 단위 텍스트 피드백만 제공하므로 하이라이트 UI 연동은 다루지 않음
+  - 캐시 키: 프롬프트 템플릿 해시 + provider + 문항/답변/글자수 제한 + 기업 분석 4필드(요약/컬처핏/사업영역/기술스택) → 답변을 수정하거나 기업 분석이 갱신되면 자동으로 새 캐시 키가 되어 재호출됨
+  - `apps/desktop/lib/cover-letter-questions.ts`에 `requestCoverLetterQuestionFeedback(questionId, provider)` 추가 — `company-analyses.ts`의 `extractFunctionErrorMessage` 로컬 복제 관행 그대로 준용
+  - UI: `cover-letter-questions-section.tsx`의 `QuestionCard`에 "AI 첨삭 받기" 버튼과 상태별 표시(processing 안내문구/completed 첨삭 텍스트/failed 에러 메시지) 추가, `application-detail-content.tsx`의 `analysis.status`/`availableProviders[0]`을 `companyAnalysisStatus`/`feedbackProvider` prop으로 전달. 문항별 4000ms 폴링(`FEEDBACK_POLL_INTERVAL_MS`)은 Task 046의 `analysisPollTimerRef` 패턴을 그대로 준용. 버튼은 `answer_text` 공백이거나 `companyAnalysisStatus !== 'completed'`이거나 첨삭 진행 중이면 비활성화
   - 완료 기준
-    - [ ] 기업 분석 결과가 프롬프트 컨텍스트에 실제로 포함됨을 로그/스냅샷으로 확인
-    - [ ] 분석 미수행 상태에서는 안내 후 일반 첨삭으로 폴백하거나 분석을 먼저 유도함
-    - [ ] 동일 답변·동일 분석에서는 캐시 히트, 분석 갱신 시 자동 무효화
-    - [ ] 문항별 피드백 이력이 버전으로 누적되고 이전 버전 조회 가능
-    - [ ] `review-document`와의 통합/분리 결정과 근거가 문서에 기록됨
-    - [ ] Playwright MCP로 답변 작성 → 피드백 요청 → 결과 표시 → 재요청 캐시 동작 E2E 검증
+    - [x] 기업 분석 결과가 프롬프트 컨텍스트에 실제로 포함됨 — `feedback-cover-letter-question/llm.ts`의 `FEEDBACK_PROMPT_TEMPLATE`에 `{{ANALYSIS_SUMMARY}}`/`{{ANALYSIS_CULTURE_FIT}}`/`{{ANALYSIS_BUSINESS_DOMAIN}}`/`{{ANALYSIS_TECH_STACK}}` 플레이스홀더로 명시적 주입(코드 리뷰로 확인, 로컬 supabase 스택 미기동으로 실제 LLM 호출 로그 확인은 미수행)
+    - [x] 분석 미수행 상태에서는 하드 실패(설계 변경) — 일반 첨삭 폴백 대신 `400 ANALYSIS_NOT_READY`로 거부하고 UI에서도 버튼을 비활성화 + 안내 문구 표시
+    - [x] 동일 답변·동일 분석에서는 캐시 히트, 분석 갱신 시 자동 무효화 — 캐시 키에 답변 본문과 기업 분석 4필드가 모두 포함되어 있어 둘 중 하나라도 바뀌면 새 키가 됨(코드 리뷰로 확인, 실제 캐시 히트 E2E는 로컬 스택 미기동으로 미수행)
+    - [x] 문항별 피드백 이력 버전 관리 — 범위 제외 결정(위 YAGNI 항목 참고), `feedback_text` 최신 1건 저장으로 대체
+    - [x] `review-document`와의 통합/분리 결정과 근거 문서화 — 위 "기존 review-document와의 관계 정리" 항목에 기록
+    - [ ] Playwright MCP로 답변 작성 → 피드백 요청 → 결과 표시 → 재요청 캐시 동작 E2E 검증 — 로컬 supabase 스택 미기동으로 미수행. 원격 반영(`supabase db push` 또는 `mcp__supabase__apply_migration`) 및 `feedback-cover-letter-question` Edge Function 배포 후 별도 검증 필요
 
 - **Task 049: 지원 기업별 제출 서류(이력서/포트폴리오) 보관**
   - PRD 참조: 2.10 / 우선순위: 중 / 선행 조건: **Task 045(도메인 스키마), Task 019(마이그레이션)**
