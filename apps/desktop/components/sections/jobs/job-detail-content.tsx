@@ -67,8 +67,11 @@ function JobDetailContent({ job }: JobDetailContentProps) {
         <Badge variant={dDay !== null && dDay <= 3 ? "destructive" : "outline"}>{dDayLabel}</Badge>
         <h1 className="text-2xl font-semibold">{job.title}</h1>
         <p className="text-sm text-muted-foreground">
-          {job.company} · {job.location} · {job.careerLevel} · {job.source}
+          {[job.company, job.location, job.careerLevel].filter(Boolean).join(" · ")}
         </p>
+        <Badge variant="outline" className="uppercase">
+          {job.source}
+        </Badge>
       </div>
 
       <div className="flex flex-wrap gap-1.5">

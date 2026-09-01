@@ -19,7 +19,7 @@ const JobDetailContent = dynamic(
   { loading: () => <LoadingState variant="detail" /> }
 )
 
-const JOB_ROW_HEIGHT = 108
+const JOB_ROW_HEIGHT = 132
 
 interface JobRowProps {
   jobs: JobPosting[]
@@ -43,15 +43,15 @@ const JobRow = memo(function JobRow({
         onClick={() => onSelect(job.id)}
         aria-current={job.id === selectedJobId}
         data-current={job.id === selectedJobId}
-        className="flex w-full flex-col gap-1.5 rounded-xl bg-card p-3 text-left text-sm text-card-foreground ring-1 ring-foreground/10 transition-colors hover:bg-muted focus-visible:bg-muted focus-visible:outline-none focus-visible:ring-ring/50 data-[current=true]:bg-muted"
+        className="flex h-full w-full flex-col gap-1.5 overflow-hidden rounded-xl bg-card p-3 text-left text-sm text-card-foreground ring-1 ring-foreground/10 transition-colors hover:bg-muted focus-visible:bg-muted focus-visible:outline-none focus-visible:ring-ring/50 data-[current=true]:bg-muted"
       >
-        <p className="text-sm font-medium">{job.title}</p>
+        <p className="line-clamp-2 text-sm font-medium">{job.title}</p>
         <p className="text-xs text-muted-foreground">
-          {job.company} · {job.location}
+          {[job.company, job.location].filter(Boolean).join(" · ")}
         </p>
-        <div className="flex flex-wrap gap-1">
-          <Badge variant="outline">{job.source}</Badge>
-          <Badge variant="outline">{job.careerLevel}</Badge>
+        <div className="mt-auto flex flex-wrap gap-1">
+          <Badge variant="outline" className="uppercase">{job.source}</Badge>
+          {job.careerLevel ? <Badge variant="outline">{job.careerLevel}</Badge> : null}
           <Badge variant="secondary">{job.deadline ? `${job.deadline} 마감` : "상시채용"}</Badge>
         </div>
       </button>
@@ -69,6 +69,7 @@ function JobsPageClient() {
   const [search, setSearch] = useState("")
   const [location, setLocation] = useState("all")
   const [careerLevel, setCareerLevel] = useState("all")
+  const [source, setSource] = useState("all")
   const [sort, setSort] = useState<JobSortOption>("deadline")
   const [selectedJobId, setSelectedJobId] = useState<string | null>(() => searchParams.get("id"))
 
@@ -92,11 +93,15 @@ function JobsPageClient() {
   }, [])
 
   const locationOptions = useMemo(
-    () => Array.from(new Set(allJobs.map((job) => job.location))),
+    () => Array.from(new Set(allJobs.map((job) => job.location).filter(Boolean))),
     [allJobs]
   )
   const careerLevelOptions = useMemo(
-    () => Array.from(new Set(allJobs.map((job) => job.careerLevel))),
+    () => Array.from(new Set(allJobs.map((job) => job.careerLevel).filter(Boolean))),
+    [allJobs]
+  )
+  const sourceOptions = useMemo(
+    () => Array.from(new Set(allJobs.map((job) => job.source))),
     [allJobs]
   )
 
@@ -110,8 +115,9 @@ function JobsPageClient() {
         job.company.toLowerCase().includes(keyword)
       const matchesLocation = location === "all" || job.location === location
       const matchesCareerLevel = careerLevel === "all" || job.careerLevel === careerLevel
+      const matchesSource = source === "all" || job.source === source
 
-      return matchesKeyword && matchesLocation && matchesCareerLevel
+      return matchesKeyword && matchesLocation && matchesCareerLevel && matchesSource
     })
 
     return filtered.sort((a, b) => {
@@ -124,7 +130,7 @@ function JobsPageClient() {
       }
       return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
     })
-  }, [allJobs, search, location, careerLevel, sort])
+  }, [allJobs, search, location, careerLevel, source, sort])
 
   const selectedJob = allJobs.find((job) => job.id === selectedJobId) ?? null
 
@@ -145,7 +151,7 @@ function JobsPageClient() {
 
   return (
     <ListDetailPanel
-      className="h-full"
+      className="h-full md:grid-cols-[1fr_1fr]"
       showDetail={!!selectedJob}
       onBack={() => setSelectedJobId(null)}
       list={
@@ -157,10 +163,13 @@ function JobsPageClient() {
             onLocationChange={handleFilterChange(setLocation)}
             careerLevel={careerLevel}
             onCareerLevelChange={handleFilterChange(setCareerLevel)}
+            source={source}
+            onSourceChange={handleFilterChange(setSource)}
             sort={sort}
             onSortChange={setSort}
             locationOptions={locationOptions}
             careerLevelOptions={careerLevelOptions}
+            sourceOptions={sourceOptions}
           />
 
           {isLoading ? (
