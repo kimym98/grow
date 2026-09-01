@@ -61,3 +61,24 @@ export const documentUploadFormSchema = z.object({
 })
 
 export type DocumentUploadFormValues = z.infer<typeof documentUploadFormSchema>
+
+export const companyApplicationStatusSchema = z.enum([
+  "준비중",
+  "서류제출",
+  "서류합격",
+  "테스트",
+  "면접",
+  "최종합격",
+  "탈락",
+])
+
+export const companyApplicationFormSchema = z.object({
+  companyName: z.string().min(1, "기업명을 입력해주세요"),
+  position: z.string().optional(),
+  applyUrl: z.string().url("올바른 URL을 입력해주세요").optional().or(z.literal("")),
+  appliedAt: z.string().optional(),
+  status: companyApplicationStatusSchema,
+  memo: z.string().optional(),
+})
+
+export type CompanyApplicationFormValues = z.infer<typeof companyApplicationFormSchema>

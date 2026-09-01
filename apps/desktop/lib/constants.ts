@@ -1,5 +1,6 @@
 import {
   Briefcase,
+  ClipboardList,
   FileText,
   HelpCircle,
   LayoutDashboard,
@@ -24,6 +25,11 @@ export const NAV_ITEMS: NavItem[] = [
     label: "공고",
     href: "/jobs",
     icon: Briefcase,
+  },
+  {
+    label: "지원 기업",
+    href: "/applications",
+    icon: ClipboardList,
   },
   {
     label: "뉴스",
