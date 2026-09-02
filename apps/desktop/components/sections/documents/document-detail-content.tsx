@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { FileText } from "lucide-react"
+import { Copy, FileText } from "lucide-react"
 import { toast } from "sonner"
 import type { DocumentReview } from "@app/shared"
 
@@ -24,6 +24,15 @@ function DocumentDetailContent({ document, canRetry, isRetrying, onRetry }: Docu
   const [selectedVersion, setSelectedVersion] = useState(
     document.versions.at(-1)?.version ?? document.version
   )
+
+  async function handleCopyQuestion(question: string) {
+    try {
+      await navigator.clipboard.writeText(question)
+      toast.success("질문을 복사했습니다")
+    } catch {
+      toast.error("복사에 실패했습니다")
+    }
+  }
 
   async function handleOpenPdf() {
     try {
@@ -123,6 +132,35 @@ function DocumentDetailContent({ document, canRetry, isRetrying, onRetry }: Docu
               <CardContent>
                 <p className="text-xs text-muted-foreground">&ldquo;{comment.quote}&rdquo;</p>
                 <p className="mt-1 text-sm">{comment.comment}</p>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      ) : null}
+
+      {document.interviewQuestions.length > 0 ? (
+        <div className="flex flex-col gap-2">
+          <h2 className="text-sm font-medium">예상 면접 질문</h2>
+          {document.interviewQuestions.map((question) => (
+            <Card key={question.id} size="sm">
+              <CardContent>
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <Badge variant="secondary">{question.category}</Badge>
+                  <Button
+                    type="button"
+                    size="icon"
+                    variant="ghost"
+                    aria-label="질문 복사"
+                    onClick={() => handleCopyQuestion(question.question)}
+                  >
+                    <Copy />
+                  </Button>
+                </div>
+                <p className="mt-1 text-sm font-medium">{question.question}</p>
+                <p className="mt-1 text-xs text-muted-foreground">{question.intent}</p>
+                {question.sourceQuote ? (
+                  <p className="mt-1 text-xs text-muted-foreground">&ldquo;{question.sourceQuote}&rdquo;</p>
+                ) : null}
               </CardContent>
             </Card>
           ))}

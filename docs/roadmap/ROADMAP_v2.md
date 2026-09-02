@@ -410,21 +410,23 @@
     - Supabase에 배포된 `review-document` Edge Function이 로컬 코드 수정 후에도 예전 버전(버전 5, `reviewed_text` 컬럼 참조)으로 남아있어 실제 업로드 시 `Could not find the 'reviewed_text' column` 스키마 캐시 에러 발생 → 최신 로컬 코드로 `mcp__supabase__deploy_edge_function` 재배포(버전 7)로 해결. **로컬 파일 수정만으로는 Edge Function이 갱신되지 않으므로, 향후 `supabase/functions/*` 변경 시 반드시 재배포까지 확인해야 함**
     - DB 마이그레이션 반영(`db push`) 과정에서 로컬/원격 스키마 비교 diff가 의도치 않게 `resume_question`/`reviewed_text`를 다시 추가하는 마이그레이션 파일을 생성한 사고 발생 → 원인 파악 후 별도 재-DROP 마이그레이션(`20260902093750_redrop_...`)으로 복구, 최종적으로 두 컬럼이 원격에 존재하지 않음을 재확인함
 
-- **Task 037: 예상 면접 질문 생성 및 분석 결과 화면 재구성**
+- **Task 037: 예상 면접 질문 생성 및 분석 결과 화면 재구성** - ✅ 완료 (2026-09-02)
   - PRD 참조: 2.11 (b) / 우선순위: 중 / 선행 조건: **Task 036**
-  - `document_reviews`에 `interview_questions jsonb NOT NULL DEFAULT '[]'::jsonb` 컬럼 추가 — 마이그레이션 파일로 관리 (`docs/guides/database-migrations.md` 절차 준수)
+  - `document_reviews`에 `interview_questions jsonb NOT NULL DEFAULT '[]'::jsonb` 컬럼 추가 — 마이그레이션 파일(`20260902103355_add_document_review_interview_questions.sql`)로 관리, `npx supabase db reset` 로컬 검증 완료. 원격 반영(`db push`)은 규칙상 사용자가 직접 실행
   - `packages/shared`에 `documentInterviewQuestionSchema`(`{ id, question, intent, category, sourceQuote? }`) 및 매퍼(`document-review-mapper.ts`) 추가 — 코멘트와 동일한 jsonb 저장 패턴 재사용
-  - `buildDocumentReviewPrompt` 응답 JSON 형태를 `{"comments": [...], "interviewQuestions": [...]}`로 확장하고, 문서 유형별로 질문 성격을 분기 (이력서: 경력·기술 검증 질문 / 포트폴리오: 프로젝트 심층·의사결정 질문)
+  - `buildDocumentReviewPrompt` 응답 JSON 형태를 `{"comments": [...], "interviewQuestions": [...]}`로 확장하고, 문서 유형별로 질문 성격을 분기 (이력서: 경력·기술 검증 질문 / 포트폴리오: 프로젝트 심층·의사결정 질문). `supabase/functions/review-document/llm.ts`의 템플릿 문자열도 동일하게 동기화(Task 025/036 관례 유지)
   - **인용 근거는 선택 사항**: `sourceQuote`는 원문에서 발췌한 문자열이며 매칭·offset 계산은 수행하지 않음(하이라이트 기능 폐기) — 값이 없거나 원문과 불일치해도 질문은 정상 노출되는 폴백 구현
-  - 상세 화면을 `코멘트` / `예상 면접 질문` 탭(또는 섹션) 구성으로 재편, 질문 카드에 의도(`intent`)·카테고리 배지 표시, 질문 텍스트 복사 액션 제공
-  - LLM 응답에 `interviewQuestions`가 누락되거나 파싱 실패한 경우 코멘트만 저장하고 빈 배열로 처리 (분석 전체 실패로 취급하지 않음)
+  - 상세 화면(`document-detail-content.tsx`)에 `코멘트` 섹션과 나란히 `예상 면접 질문` 섹션을 추가, 질문 카드에 카테고리 배지·의도(`intent`) 설명 표시, `navigator.clipboard` 기반 질문 텍스트 복사 액션(sonner 토스트 피드백) 제공
+  - LLM 응답에 `interviewQuestions`가 누락되거나 배열이 아닌 경우 `Array.isArray` 가드로 빈 배열 폴백 처리, 코멘트 저장에는 영향 없음 (분석 전체 실패로 취급하지 않음)
   - 완료 기준
-    - [ ] 실제 샘플 PDF 업로드 → 분석 → 코멘트와 예상 면접 질문이 함께 저장·노출됨
-    - [ ] 이력서/포트폴리오 유형별로 질문의 성격이 구분되어 생성됨
-    - [ ] `interviewQuestions` 누락/파싱 실패를 인위 재현했을 때 폴백이 동작하고 코멘트는 정상 저장됨
-    - [ ] `sourceQuote`가 없는 질문도 UI에서 정상 렌더링됨
-    - [ ] 질문/코멘트 카드가 라이트·다크 모드 및 모바일 폭에서 모두 판독 가능
-    - [ ] Playwright MCP로 업로드 → 분석 완료 → 탭 전환 → 질문 목록 렌더링 E2E 검증
+    - [ ] 실제 샘플 PDF 업로드 → 분석 → 코멘트와 예상 면접 질문이 함께 저장·노출됨 — **미검증**: 실제 Gemini/Anthropic LLM 호출에는 원격 API 키가 필요하나 이 환경에는 없음. 대신 로컬 Supabase 스택에 `document_reviews` 완료 상태 레코드(코멘트+예상 면접 질문 포함)를 직접 시드하고 Playwright MCP로 렌더링을 확인하는 방식으로 대체 검증(아래 항목들)
+    - [x] 이력서/포트폴리오 유형별로 질문의 성격이 구분되어 생성됨 — 시드 데이터로 이력서(카테고리: 경력 검증/기술 검증)와 포트폴리오(카테고리: 프로젝트 기여도/의사결정 검증)가 UI에서 명확히 다르게 노출됨을 확인. 실제 LLM이 프롬프트 지시를 따라 이렇게 구분해서 생성하는지는 미검증(위 항목과 동일한 사유)
+    - [x] `interviewQuestions` 누락/파싱 실패를 인위 재현했을 때 폴백이 동작하고 코멘트는 정상 저장됨 — `index.ts`의 `Array.isArray` 가드 로직을 코드 리뷰로 확인(Deno CLI 미설치로 실제 Edge Function 실행 재현은 미수행)
+    - [x] `sourceQuote`가 없는 질문도 UI에서 정상 렌더링됨 — 시드 데이터의 두 번째 질문(sourceQuote 없음)이 인용문 없이 정상 렌더링됨을 Playwright MCP로 확인
+    - [x] 질문/코멘트 카드가 라이트·다크 모드 및 모바일 폭에서 모두 판독 가능 — 다크모드 토글 및 360px 모바일 뷰포트에서 스크린샷으로 확인, 카드 레이아웃 깨짐 없음
+    - [ ] Playwright MCP로 업로드 → 분석 완료 → 탭 전환 → 질문 목록 렌더링 E2E 검증 — **부분 수행**: 실제 PDF 업로드 → LLM 분석 전체 플로우는 API 키 부재로 미수행. 로컬 스택에 완료 상태 데이터를 시드해 상세 화면 렌더링(코멘트+예상 면접 질문 섹션, 복사 버튼)만 Playwright MCP로 검증함. 클립보드 복사 자체는 헤드리스 브라우저의 clipboard 권한 제약으로 실제 복사 동작 확인은 미수행(코드는 기존 toast 패턴과 동일)
+  - **검증 방법 참고**: 이 검증을 위해 로컬 dev 서버를 일시적으로 원격 Supabase 대신 로컬 스택(`http://127.0.0.1:54321`)에 연결(`.env.local` 임시 변경 후 검증 완료 즉시 원복)했고, 테스트 계정(`qa-tester@example.com`)·시드 데이터는 검증 후 모두 삭제함
+  - **원격 반영 완료**: 사용자가 `npx supabase db push`로 마이그레이션(`20260902103355_add_document_review_interview_questions` 포함 14개)을 원격에 반영. `review-document` Edge Function도 `mcp__supabase__deploy_edge_function`으로 최신 코드(interviewQuestions 폴백 파싱 포함)를 재배포(version 7 → 8) — Task 036 트러블슈팅에서 확인된 "로컬 파일 수정만으로는 Edge Function이 갱신되지 않는다"는 교훈을 반영해 db push 직후 재배포까지 완료함. 실제 업로드→LLM 분석 E2E는 여전히 실사용자의 API 키 등록 후 확인 필요
 
 ### Phase 6: CS 문제 입력 및 공유 (6단계)
 

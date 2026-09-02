@@ -15,6 +15,7 @@ export type LlmProviderName = "gemini" | "anthropic"
 
 export interface DocumentReviewResult {
   comments: Array<{ quote: string; comment: string }>
+  interviewQuestions?: Array<{ question: string; intent: string; category: string; sourceQuote?: string }>
 }
 
 const ANTHROPIC_MAX_TOKENS = 4096
@@ -25,6 +26,7 @@ const ANTHROPIC_MAX_TOKENS = 4096
 // 그 유형의 캐시만 무효화되고 다른 유형의 캐시는 그대로 재사용된다(review.type로 템플릿을 선택하는 index.ts 참고)
 export const RESUME_PROMPT_TEMPLATE = `당신은 신입/주니어 개발자 취업을 돕는 이력서 첨삭 전문가입니다.
 아래 원문을 읽고 다음 세 가지 관점에서 개선이 필요한 부분을 직접 인용(quote)하고, 왜 고쳐야 하는지 코멘트를 남기세요.
+또한 원문 내용을 바탕으로 경력·기술스택 검증에 초점을 맞춘 예상 면접 질문 2~3개를 생성하세요(실제로 그 역할을 수행했는지, 기술을 왜 선택했는지 확인하는 질문 중심).
 
 평가 관점:
 1. 경력·기술스택 표현: 담당 업무의 역할/범위가 드러나는지, 기술 나열이 사용 맥락 없이 키워드 덤프로 끝나지 않는지
@@ -43,16 +45,27 @@ export const RESUME_PROMPT_TEMPLATE = `당신은 신입/주니어 개발자 취�
 원문: "React, Next.js, TypeScript, Node.js, AWS를 사용할 수 있습니다."
 기대 코멘트: 기술 스택을 사용 맥락 없이 나열만 하고 있습니다. 각 기술을 실제로 어떤 문제를 해결하는 데 썼는지 한 줄씩이라도 덧붙이세요.
 
+예상 면접 질문 예시
+- question: "담당하신 백엔드 시스템의 트래픽 규모와 팀 내 역할을 구체적으로 설명해주실 수 있나요?"
+  intent: "경력 기술이 실제 경험에 근거하는지 검증"
+  category: "경력 검증"
+- question: "React와 Next.js 중 이 프로젝트에서 Next.js를 선택한 기술적 이유는 무엇인가요?"
+  intent: "기술 스택 나열의 실제 이해도와 선택 근거 확인"
+  category: "기술 검증"
+
+sourceQuote는 질문의 근거가 된 원문 문구가 있을 때만 선택적으로 포함하세요. 원문과 정확히 일치하지 않아도 되며, 없어도 됩니다.
+
 원문:
 """
 {{TEXT}}
 """
 
 다른 설명 없이 아래 JSON 형식으로만 응답하세요:
-{"comments": [{"quote": string, "comment": string}]}`
+{"comments": [{"quote": string, "comment": string}], "interviewQuestions": [{"question": string, "intent": string, "category": string, "sourceQuote"?: string}]}`
 
 export const PORTFOLIO_PROMPT_TEMPLATE = `당신은 신입/주니어 개발자 취업을 돕는 포트폴리오 첨삭 전문가입니다.
 아래 원문을 읽고 다음 세 가지 관점에서 개선이 필요한 부분을 직접 인용(quote)하고, 왜 고쳐야 하는지 코멘트를 남기세요.
+또한 원문 내용을 바탕으로 프로젝트 심층·의사결정 검증에 초점을 맞춘 예상 면접 질문 2~3개를 생성하세요(설계 의사결정, 트레이드오프, 실패·한계 대응을 확인하는 질문 중심).
 
 평가 관점:
 1. 프로젝트 기여도: 팀 성과와 본인 기여의 구분이 명확한지("우리는" → "내가 맡은 부분")
@@ -71,13 +84,23 @@ export const PORTFOLIO_PROMPT_TEMPLATE = `당신은 신입/주니어 개발자 �
 원문: "상태 관리는 Redux를 사용했습니다."
 기대 코멘트: 기술 선택에 대한 근거가 없습니다. Redux 대신 고려했던 대안(Context API, Zustand 등)과 이 프로젝트에서 Redux를 택한 이유(트레이드오프)를 함께 서술하세요.
 
+예상 면접 질문 예시
+- question: "실시간 채팅 기능에서 본인이 직접 설계하거나 구현한 부분은 정확히 어디인가요?"
+  intent: "팀 성과와 본인 기여를 구분해 실제 역할 확인"
+  category: "프로젝트 기여도"
+- question: "Redux 대신 Context API나 Zustand를 고려하지 않은 이유가 있나요?"
+  intent: "기술 선택의 트레이드오프 이해도와 의사결정 근거 확인"
+  category: "의사결정 검증"
+
+sourceQuote는 질문의 근거가 된 원문 문구가 있을 때만 선택적으로 포함하세요. 원문과 정확히 일치하지 않아도 되며, 없어도 됩니다.
+
 원문:
 """
 {{TEXT}}
 """
 
 다른 설명 없이 아래 JSON 형식으로만 응답하세요:
-{"comments": [{"quote": string, "comment": string}]}`
+{"comments": [{"quote": string, "comment": string}], "interviewQuestions": [{"question": string, "intent": string, "category": string, "sourceQuote"?: string}]}`
 
 function buildDocumentReviewPrompt(input: { text: string; documentType: "resume" | "portfolio" }): string {
   const template = input.documentType === "resume" ? RESUME_PROMPT_TEMPLATE : PORTFOLIO_PROMPT_TEMPLATE

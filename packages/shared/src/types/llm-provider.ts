@@ -8,6 +8,7 @@ export interface LlmProvider {
     documentType: "resume" | "portfolio"
   }): Promise<{
     comments: Array<{ quote: string; comment: string }>
+    interviewQuestions: Array<{ question: string; intent: string; category: string; sourceQuote?: string }>
   }>
 
   generateQuizFollowUp(input: {

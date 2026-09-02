@@ -133,6 +133,17 @@ export default {
         comment: comment.comment,
       }))
 
+      // interviewQuestions 파싱 실패/누락은 분석 전체 실패로 취급하지 않고 빈 배열로 폴백한다
+      const interviewQuestions = Array.isArray(result.interviewQuestions)
+        ? result.interviewQuestions.map((question) => ({
+            id: crypto.randomUUID(),
+            question: question.question,
+            intent: question.intent,
+            category: question.category,
+            sourceQuote: question.sourceQuote,
+          }))
+        : []
+
       const versions: DocumentReviewVersion[] = [
         ...existingVersions,
         { version: review.version, createdAt: new Date().toISOString(), summary: "AI 첨삭 완료" },
@@ -144,6 +155,7 @@ export default {
           status: "completed",
           original_text: originalText,
           comments,
+          interview_questions: interviewQuestions,
           versions,
         })
         .eq("id", body.documentReviewId)
