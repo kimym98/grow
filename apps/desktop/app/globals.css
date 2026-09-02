@@ -204,3 +204,45 @@
     @apply font-sans;
   }
 }
+
+/* 전역 커스텀 스크롤바 */
+:root {
+  --scrollbar-track: oklch(0.9751 0.0127 244.2507);
+  --scrollbar-thumb: oklch(0.7 0.01 264 / 40%);
+  --scrollbar-thumb-hover: oklch(0.55 0.02 264 / 60%);
+}
+
+.dark {
+  --scrollbar-track: #121212;
+  --scrollbar-thumb: oklch(0.55 0.01 264 / 50%);
+  --scrollbar-thumb-hover: oklch(0.75 0.01 264 / 65%);
+}
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track);
+}
+
+*::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+*::-webkit-scrollbar-track {
+  background: var(--scrollbar-track);
+}
+
+*::-webkit-scrollbar-thumb {
+  background-color: var(--scrollbar-thumb);
+  border-radius: 9999px;
+  border: 2px solid var(--scrollbar-track);
+  background-clip: padding-box;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background-color: var(--scrollbar-thumb-hover);
+}
+
+*::-webkit-scrollbar-corner {
+  background: var(--scrollbar-track);
+}
