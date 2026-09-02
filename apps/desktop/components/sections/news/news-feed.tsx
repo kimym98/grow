@@ -7,7 +7,10 @@ import type { TechNews } from "@app/shared"
 
 import { Input } from "@/components/ui/input"
 import { EmptyState } from "@/components/common/empty-state"
-import { bookmarkTechNews, fetchTechNews, unbookmarkTechNews } from "@/lib/tech-news"
+import { LoadingState } from "@/components/common/loading-state"
+import { useDebouncedValue } from "@/hooks/use-debounced-value"
+import { useInfiniteScroll } from "@/hooks/use-infinite-scroll"
+import { bookmarkTechNews, fetchTechNews, TECH_NEWS_PAGE_SIZE, unbookmarkTechNews } from "@/lib/tech-news"
 
 import { NewsCard } from "./news-card"
 
@@ -35,6 +38,8 @@ function useNewsColumnCount() {
 interface NewsRowProps {
   rows: TechNews[][]
   onToggleBookmark: (id: string) => void
+  hasMore: boolean
+  sentinelRef: (node: HTMLElement | null) => void
 }
 
 const NewsRow = memo(function NewsRow({
@@ -42,7 +47,18 @@ const NewsRow = memo(function NewsRow({
   style,
   rows,
   onToggleBookmark,
+  hasMore,
+  sentinelRef,
 }: RowComponentProps<NewsRowProps>) {
+  // rows 뒤에 추가된 마지막 index는 다음 페이지 로딩을 트리거하는 센티넬 row다
+  if (index >= rows.length) {
+    return (
+      <div style={style} ref={hasMore ? sentinelRef : undefined} className="flex items-center justify-center px-1 pb-4">
+        <LoadingState variant="list" count={1} />
+      </div>
+    )
+  }
+
   const row = rows[index]
 
   return (
@@ -56,16 +72,27 @@ const NewsRow = memo(function NewsRow({
 
 function NewsFeed() {
   const [newsList, setNewsList] = useState<TechNews[]>([])
+  const [page, setPage] = useState(0)
+  const [hasMore, setHasMore] = useState(true)
   const [isLoading, setIsLoading] = useState(true)
+  const [isLoadingMore, setIsLoadingMore] = useState(false)
   const [loadError, setLoadError] = useState<string | null>(null)
   const [searchQuery, setSearchQuery] = useState("")
+  const debouncedSearch = useDebouncedValue(searchQuery, 300)
 
+  // 검색어가 바뀌면 첫 페이지부터 다시 조회한다
   useEffect(() => {
     let cancelled = false
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- 검색어 변경 시 즉시 로딩 표시로 전환하기 위한 동기 초기화
+    setIsLoading(true)
+    setLoadError(null)
 
-    fetchTechNews()
+    fetchTechNews({ page: 0, pageSize: TECH_NEWS_PAGE_SIZE, search: debouncedSearch })
       .then((news) => {
-        if (!cancelled) setNewsList(news)
+        if (cancelled) return
+        setNewsList(news)
+        setPage(0)
+        setHasMore(news.length === TECH_NEWS_PAGE_SIZE)
       })
       .catch((error: unknown) => {
         if (!cancelled) setLoadError(error instanceof Error ? error.message : String(error))
@@ -77,7 +104,31 @@ function NewsFeed() {
     return () => {
       cancelled = true
     }
-  }, [])
+  }, [debouncedSearch])
+
+  const handleLoadMore = useCallback(() => {
+    setIsLoadingMore(true)
+    const nextPage = page + 1
+
+    fetchTechNews({ page: nextPage, pageSize: TECH_NEWS_PAGE_SIZE, search: debouncedSearch })
+      .then((news) => {
+        setNewsList((prev) => [...prev, ...news])
+        setPage(nextPage)
+        setHasMore(news.length === TECH_NEWS_PAGE_SIZE)
+      })
+      .catch((error: unknown) => {
+        setLoadError(error instanceof Error ? error.message : String(error))
+      })
+      .finally(() => {
+        setIsLoadingMore(false)
+      })
+  }, [page, debouncedSearch])
+
+  const { sentinelRef } = useInfiniteScroll({
+    hasMore,
+    isLoading: isLoadingMore || isLoading,
+    onLoadMore: handleLoadMore,
+  })
 
   // isBookmarked 최신값 조회를 위해 newsList를 참조하는 부수효과(API 분기 호출)가 있어
   // 완전한 참조 안정화 대신 newsList를 의존성으로 명시한다
@@ -104,29 +155,20 @@ function NewsFeed() {
     [newsList]
   )
 
-  const filteredNewsList = useMemo(() => {
-    const query = searchQuery.trim().toLowerCase()
-    if (!query) return newsList
-
-    return newsList.filter((news) =>
-      [news.title, news.summary, news.source].some((field) =>
-        field.toLowerCase().includes(query)
-      )
-    )
-  }, [newsList, searchQuery])
-
   const columnCount = useNewsColumnCount()
   const newsRows = useMemo(() => {
     const rows: TechNews[][] = []
-    for (let i = 0; i < filteredNewsList.length; i += columnCount) {
-      rows.push(filteredNewsList.slice(i, i + columnCount))
+    for (let i = 0; i < newsList.length; i += columnCount) {
+      rows.push(newsList.slice(i, i + columnCount))
     }
     return rows
-  }, [filteredNewsList, columnCount])
+  }, [newsList, columnCount])
+
+  const rowCount = newsRows.length + (hasMore ? 1 : 0)
 
   const newsRowProps = useMemo(
-    () => ({ rows: newsRows, onToggleBookmark: toggleBookmark }),
-    [newsRows, toggleBookmark]
+    () => ({ rows: newsRows, onToggleBookmark: toggleBookmark, hasMore, sentinelRef }),
+    [newsRows, toggleBookmark, hasMore, sentinelRef]
   )
 
   if (isLoading) {
@@ -135,10 +177,6 @@ function NewsFeed() {
 
   if (loadError) {
     return <EmptyState title="뉴스를 불러오지 못했습니다" description={loadError} />
-  }
-
-  if (newsList.length === 0) {
-    return <EmptyState title="표시할 뉴스가 없습니다" description="잠시 후 다시 확인해주세요" />
   }
 
   return (
@@ -155,16 +193,16 @@ function NewsFeed() {
         />
       </div>
 
-      {filteredNewsList.length === 0 ? (
+      {newsList.length === 0 ? (
         <EmptyState
-          title="검색 결과가 없습니다"
-          description="다른 검색어로 다시 시도해보세요"
+          title={searchQuery ? "검색 결과가 없습니다" : "표시할 뉴스가 없습니다"}
+          description={searchQuery ? "다른 검색어로 다시 시도해보세요" : "잠시 후 다시 확인해주세요"}
         />
       ) : (
         <div className="min-h-0 flex-1">
           <List
             rowComponent={NewsRow}
-            rowCount={newsRows.length}
+            rowCount={rowCount}
             rowHeight={NEWS_ROW_HEIGHT}
             rowProps={newsRowProps}
           />
