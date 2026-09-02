@@ -8,6 +8,7 @@ import type { CompanyAnalysis, CompanyApplication, CompanyApplicationStatus } fr
 import { STATUS_OPTIONS } from "@/components/sections/applications/application-filters"
 import { ApplicationStatusBadge } from "@/components/sections/applications/status-badge"
 import { ApplicationFormDialog } from "@/components/sections/applications/application-form-dialog"
+import { ApplicationMemoPopover } from "@/components/sections/applications/application-memo-popover"
 import { CompanyAnalysisCard } from "@/components/sections/applications/company-analysis-card"
 import { CoverLetterQuestionsSection } from "@/components/sections/applications/cover-letter-questions-section"
 import { ApplicationDocumentsSection } from "@/components/sections/applications/application-documents-section"
@@ -120,7 +121,10 @@ function ApplicationDetailContent({ application, onUpdated, onDeleted }: Applica
     <div className="flex flex-col gap-6 p-6">
       <div className="flex flex-col gap-2">
         <ApplicationStatusBadge status={application.status} />
-        <h1 className="text-2xl font-semibold">{application.companyName}</h1>
+        <div className="flex items-center gap-1.5">
+          <h1 className="text-2xl font-semibold">{application.companyName}</h1>
+          <ApplicationMemoPopover application={application} onSuccess={onUpdated} />
+        </div>
         {application.position ? <p className="text-sm text-muted-foreground">{application.position}</p> : null}
       </div>
 
@@ -128,11 +132,6 @@ function ApplicationDetailContent({ application, onUpdated, onDeleted }: Applica
         <p className="text-sm text-muted-foreground">
           지원일: <span className="text-foreground">{application.appliedAt ?? "미입력"}</span>
         </p>
-        {application.memo ? (
-          <p className="whitespace-pre-wrap text-sm text-muted-foreground">
-            메모: <span className="text-foreground">{application.memo}</span>
-          </p>
-        ) : null}
       </div>
 
       <div className="flex flex-col gap-1.5">

@@ -82,6 +82,12 @@ export const companyApplicationFormSchema = z.object({
 
 export type CompanyApplicationFormValues = z.infer<typeof companyApplicationFormSchema>
 
+export const companyApplicationMemoFormSchema = z.object({
+  memo: z.string().max(2000, "메모는 2000자 이내로 입력해주세요."),
+})
+
+export type CompanyApplicationMemoFormValues = z.infer<typeof companyApplicationMemoFormSchema>
+
 export const coverLetterQuestionFormSchema = z.object({
   questionText: z.string().min(1, "문항을 입력해주세요"),
   charLimit: z.string().optional(),
