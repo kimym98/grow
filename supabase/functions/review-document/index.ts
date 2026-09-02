@@ -7,7 +7,8 @@ import { AuthRequiredError, jsonError, requireUserId } from "../_shared/auth.ts"
 import { getCachedLlmResponse, setCachedLlmResponse, hashPromptTemplate, sha256Hex } from "../_shared/llm-cache.ts"
 import { logEdgeFunctionError } from "../_shared/error-log.ts"
 import {
-  DOCUMENT_REVIEW_PROMPT_TEMPLATE,
+  PORTFOLIO_PROMPT_TEMPLATE,
+  RESUME_PROMPT_TEMPLATE,
   generateDocumentReview,
   type DocumentReviewResult,
   type LlmProviderName,
@@ -105,13 +106,13 @@ export default {
         throw new Error("PDF에서 텍스트를 추출하지 못했습니다")
       }
 
-      // 캐시 키: 프롬프트 템플릿 해시 + provider + 문서 타입/문항 + 원문 해시. 프롬프트 문구가 바뀌면
-      // 해시가 바뀌어 자동으로 캐시가 무효화되고, 동일 문서라도 재첨삭 시 원문(originalText)이 그대로면
-      // 캐시를 재사용하고, 원문이 바뀌면(재업로드) 새 키가 된다
-      const promptTemplateHash = await hashPromptTemplate(DOCUMENT_REVIEW_PROMPT_TEMPLATE)
-      const cacheKey = await sha256Hex(
-        `${promptTemplateHash}|${body.provider}|${review.type}|${review.resume_question ?? ""}|${originalText}`
-      )
+      // 캐시 키: 프롬프트 템플릿 해시 + provider + 문서 타입 + 원문 해시. 이력서/포트폴리오는 템플릿 자체가
+      // 다르므로 review.type에 맞는 템플릿만 해싱한다 — 한쪽 템플릿 문구를 바꿔도 그 유형의 캐시만
+      // 무효화되고 다른 유형의 캐시는 그대로 재사용된다. 동일 문서라도 재첨삭 시 원문(originalText)이
+      // 그대로면 캐시를 재사용하고, 원문이 바뀌면(재업로드) 새 키가 된다
+      const promptTemplate = review.type === "resume" ? RESUME_PROMPT_TEMPLATE : PORTFOLIO_PROMPT_TEMPLATE
+      const promptTemplateHash = await hashPromptTemplate(promptTemplate)
+      const cacheKey = await sha256Hex(`${promptTemplateHash}|${body.provider}|${review.type}|${originalText}`)
 
       const cached = await getCachedLlmResponse<DocumentReviewResult>(ctx.supabase, FUNCTION_NAME, cacheKey)
 
@@ -120,7 +121,6 @@ export default {
         (await generateDocumentReview(body.provider, apiKey, {
           text: originalText,
           documentType: review.type,
-          resumeQuestion: review.resume_question ?? undefined,
         }))
 
       if (!cached) {
@@ -143,7 +143,6 @@ export default {
         .update({
           status: "completed",
           original_text: originalText,
-          reviewed_text: result.reviewedText,
           comments,
           versions,
         })

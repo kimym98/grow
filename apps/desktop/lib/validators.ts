@@ -56,7 +56,6 @@ export type LlmApiKeyFormValues = z.infer<typeof llmApiKeyFormSchema>
 export const documentUploadFormSchema = z.object({
   fileName: z.string().min(1, "파일을 선택해주세요"),
   type: z.enum(["resume", "portfolio"]),
-  resumeQuestion: z.string().optional(),
   provider: z.enum(["gemini", "anthropic"], { message: "첨삭에 사용할 AI를 선택해주세요" }),
 })
 

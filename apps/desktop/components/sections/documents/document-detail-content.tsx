@@ -1,13 +1,16 @@
 "use client"
 
-import { useMemo, useState } from "react"
-import { computeDiffSegments, type DocumentReview } from "@app/shared"
+import { useState } from "react"
+import { FileText } from "lucide-react"
+import { toast } from "sonner"
+import type { DocumentReview } from "@app/shared"
 
 import { formatDate } from "@/lib/format"
-import { cn } from "@/lib/utils"
+import { getDocumentReviewSignedUrl } from "@/lib/document-reviews"
+import { supabase } from "@/lib/supabase"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent } from "@/components/ui/card"
 import { DocumentStatusBadge } from "@/components/sections/documents/document-status-badge"
 
 interface DocumentDetailContentProps {
@@ -22,22 +25,33 @@ function DocumentDetailContent({ document, canRetry, isRetrying, onRetry }: Docu
     document.versions.at(-1)?.version ?? document.version
   )
 
-  const diffSegments = useMemo(
-    () => computeDiffSegments(document.originalText, document.reviewedText ?? document.originalText),
-    [document.originalText, document.reviewedText]
-  )
+  async function handleOpenPdf() {
+    try {
+      const { data: userData, error } = await supabase.auth.getUser()
+      if (error) throw new Error(error.message)
+      if (!userData.user) throw new Error("로그인이 필요합니다")
+
+      const signedUrl = await getDocumentReviewSignedUrl(userData.user.id, document.id)
+      window.open(signedUrl, "_blank", "noopener,noreferrer")
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "PDF 열기에 실패했습니다")
+    }
+  }
 
   return (
     <div className="flex flex-col gap-6 p-6">
       <div className="flex flex-col gap-2">
-        <div className="flex flex-wrap items-center gap-2">
-          <DocumentStatusBadge status={document.status} />
-          <Badge variant="outline">{document.type === "resume" ? "자소서" : "포트폴리오"}</Badge>
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div className="flex flex-wrap items-center gap-2">
+            <DocumentStatusBadge status={document.status} />
+            <Badge variant="outline">{document.type === "resume" ? "이력서" : "포트폴리오"}</Badge>
+          </div>
+          <Button type="button" size="sm" variant="outline" onClick={handleOpenPdf}>
+            <FileText />
+            PDF 원본 열기
+          </Button>
         </div>
         <h1 className="text-2xl font-semibold">{document.title}</h1>
-        {document.resumeQuestion ? (
-          <p className="text-sm text-muted-foreground">문항: {document.resumeQuestion}</p>
-        ) : null}
         <p className="text-xs text-muted-foreground">최종 수정일: {formatDate(document.updatedAt)}</p>
       </div>
 
@@ -65,24 +79,8 @@ function DocumentDetailContent({ document, canRetry, isRetrying, onRetry }: Docu
 
       {document.status === "completed" ? (
         <Card>
-          <CardHeader>
-            <CardTitle>첨삭 결과</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-sm leading-relaxed whitespace-pre-wrap">
-              {diffSegments.map((segment, index) => (
-                <span
-                  key={index}
-                  className={cn(
-                    segment.type === "added" && "bg-green-500/15 text-green-700 dark:text-green-400",
-                    segment.type === "removed" &&
-                      "text-red-700 line-through decoration-red-500/70 dark:text-red-400"
-                  )}
-                >
-                  {segment.text}
-                </span>
-              ))}
-            </p>
+          <CardContent className="text-sm text-muted-foreground">
+            첨삭이 완료되었습니다. 위 &ldquo;PDF 원본 열기&rdquo;로 원문 서식을 그대로 확인하며 아래 코멘트를 함께 보세요.
           </CardContent>
         </Card>
       ) : document.status === "failed" ? (

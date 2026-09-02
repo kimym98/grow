@@ -55,12 +55,9 @@ function DocumentUploadDropzone({ availableProviders, onSubmit, onOpenChange }: 
     defaultValues: {
       fileName: "",
       type: "resume",
-      resumeQuestion: "",
       provider: availableProviders[0],
     },
   })
-
-  const type = form.watch("type")
 
   function handleFile(selected?: File) {
     if (!selected) return
@@ -174,7 +171,7 @@ function DocumentUploadDropzone({ availableProviders, onSubmit, onOpenChange }: 
                     </SelectTrigger>
                   </FormControl>
                   <SelectContent>
-                    <SelectItem value="resume">자소서 (문항별)</SelectItem>
+                    <SelectItem value="resume">이력서</SelectItem>
                     <SelectItem value="portfolio">포트폴리오</SelectItem>
                   </SelectContent>
                 </Select>
@@ -182,22 +179,6 @@ function DocumentUploadDropzone({ availableProviders, onSubmit, onOpenChange }: 
               </FormItem>
             )}
           />
-
-          {type === "resume" ? (
-            <FormField
-              control={form.control}
-              name="resumeQuestion"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>자소서 문항</FormLabel>
-                  <FormControl>
-                    <Input placeholder="예: 지원 동기를 서술하시오" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-          ) : null}
 
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>

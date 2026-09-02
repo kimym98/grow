@@ -59,7 +59,7 @@ async function loadSearchItems(): Promise<RecentFavoriteItem[]> {
         type: "document",
         id: doc.id,
         title: doc.title,
-        subtitle: doc.type === "resume" ? "자소서" : "포트폴리오",
+        subtitle: doc.type === "resume" ? "이력서" : "포트폴리오",
         href: `/documents?id=${doc.id}`,
       })
     ),

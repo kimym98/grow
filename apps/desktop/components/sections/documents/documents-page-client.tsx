@@ -66,7 +66,7 @@ function DocumentsPageClient() {
       type: "document",
       id: selectedDocument.id,
       title: selectedDocument.title,
-      subtitle: selectedDocument.type === "resume" ? "자소서" : "포트폴리오",
+      subtitle: selectedDocument.type === "resume" ? "이력서" : "포트폴리오",
       href: `/documents?id=${selectedDocument.id}`,
     })
   }, [addRecent, selectedDocument])
@@ -122,7 +122,6 @@ function DocumentsPageClient() {
         file,
         title: values.fileName,
         type: values.type,
-        resumeQuestion: values.type === "resume" ? values.resumeQuestion : undefined,
       })
 
       setSelectedDocumentId(documentReviewId)
@@ -208,7 +207,7 @@ function DocumentsPageClient() {
                     >
                       <p className="text-sm font-medium">{document.title}</p>
                       <p className="text-xs text-muted-foreground">
-                        {document.type === "resume" ? "자소서" : "포트폴리오"} · v{document.version}
+                        {document.type === "resume" ? "이력서" : "포트폴리오"} · v{document.version}
                       </p>
                       <DocumentStatusBadge status={document.status} />
                     </button>

@@ -46,8 +46,7 @@ export class GeminiProvider implements LlmProvider {
   async generateDocumentReview(input: {
     text: string
     documentType: "resume" | "portfolio"
-    resumeQuestion?: string
-  }): Promise<{ reviewedText: string; comments: Array<{ quote: string; comment: string }> }> {
+  }): Promise<{ comments: Array<{ quote: string; comment: string }> }> {
     const prompt = buildDocumentReviewPrompt(input)
     const rawText = await this.generateContent(prompt)
     return parseJsonResponse("gemini", rawText)

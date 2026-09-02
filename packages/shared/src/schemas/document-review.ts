@@ -27,8 +27,8 @@ export type DocumentReviewCommentSchema = z.infer<typeof documentReviewCommentSc
 
 /**
  * 문서 첨삭 도메인 엔티티(DB 레코드) 검증 스키마
- * mocks의 diffSegments는 UI 렌더링용 파생 데이터이므로 DB에는 저장하지 않고,
- * originalText/reviewedText 원문을 저장한 뒤 클라이언트에서 diff를 계산하는 방식으로 설계함
+ * 업로드 유형은 이력서(resume)/포트폴리오(portfolio) 2종으로 한정하며, LLM 분석 결과는
+ * 원문(originalText)과 유형별 관점의 코멘트(comments)만 생성한다(전체 첨삭본·비교뷰는 산출하지 않음)
  * (docs/database-schema.md 참고)
  */
 export const documentReviewSchema = z.object({
@@ -38,9 +38,7 @@ export const documentReviewSchema = z.object({
   type: documentTypeSchema,
   status: documentReviewStatusSchema,
   version: z.number().int().positive(),
-  resumeQuestion: z.string().optional(),
   originalText: z.string(),
-  reviewedText: z.string().optional(),
   versions: z.array(documentReviewVersionSchema),
   comments: z.array(documentReviewCommentSchema),
   createdAt: z.string(),

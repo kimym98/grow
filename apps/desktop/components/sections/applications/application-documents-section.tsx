@@ -28,7 +28,7 @@ interface ApplicationDocumentsSectionProps {
 }
 
 const DOCUMENT_TYPE_LABEL: Record<DocumentReview["type"], string> = {
-  resume: "자소서",
+  resume: "이력서",
   portfolio: "포트폴리오",
 }
 
@@ -115,7 +115,7 @@ function UploadDialog({
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="resume">자소서</SelectItem>
+              <SelectItem value="resume">이력서</SelectItem>
               <SelectItem value="portfolio">포트폴리오</SelectItem>
             </SelectContent>
           </Select>

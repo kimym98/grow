@@ -167,19 +167,19 @@ create table tech_news_bookmarks (
 
 ## 4. document_reviews (문서 첨삭)
 
-자소서/포트폴리오 업로드 및 LLM 첨삭 결과. MVP 단계에서는 단순성을 우선해 `versions`, `comments`를 JSONB 컬럼으로 저장하고, 추후 조회/집계 요구가 늘어나면 별도 테이블로 정규화한다.
+이력서/포트폴리오 업로드 및 LLM 첨삭 결과. MVP 단계에서는 단순성을 우선해 `versions`, `comments`를 JSONB 컬럼으로 저장하고, 추후 조회/집계 요구가 늘어나면 별도 테이블로 정규화한다.
+
+> Task 036에서 `resume_question`(자소서 문항 입력), `reviewed_text`(전체 첨삭본)를 제거했다. 업로드 유형은 이력서/포트폴리오 2종으로 한정되고, LLM 분석 결과는 원문(`original_text`) + 유형별 관점의 코멘트(`comments`)만 생성한다(비교뷰/하이라이트 폐기).
 
 | 컬럼 | 타입 | Nullable | 기본값 | 설명 |
 |---|---|---|---|---|
 | id | uuid | NOT NULL | gen_random_uuid() | PK |
 | user_id | uuid | NOT NULL | | auth.users 참조 |
 | title | text | NOT NULL | | 문서 제목 |
-| type | text | NOT NULL | | resume / portfolio |
+| type | text | NOT NULL | | resume(이력서) / portfolio(포트폴리오) |
 | status | text | NOT NULL | 'pending' | pending / processing / completed / failed |
 | version | integer | NOT NULL | 1 | 현재 버전 번호 |
-| resume_question | text | NULL | | 자소서 문항 (type=resume일 때) |
 | original_text | text | NOT NULL | | 원문 (PDF 추출 텍스트) |
-| reviewed_text | text | NULL | | LLM 첨삭 결과 원문 |
 | versions | jsonb | NOT NULL | '[]' | { version, createdAt, summary }[] |
 | comments | jsonb | NOT NULL | '[]' | { id, quote, comment }[] |
 | created_at | timestamptz | NOT NULL | now() | |
@@ -199,9 +199,7 @@ create table document_reviews (
   type text not null check (type in ('resume','portfolio')),
   status text not null default 'pending' check (status in ('pending','processing','completed','failed')),
   version integer not null default 1,
-  resume_question text,
   original_text text not null,
-  reviewed_text text,
   versions jsonb not null default '[]',
   comments jsonb not null default '[]',
   created_at timestamptz not null default now(),
@@ -209,8 +207,6 @@ create table document_reviews (
 );
 create index on document_reviews (user_id, updated_at desc);
 ```
-
-> mocks의 `diffSegments`(원문 대비 추가/삭제 표시)는 UI 렌더링 시점에 `original_text`와 `reviewed_text`를 비교해 클라이언트에서 계산하는 파생 데이터로 설계했다. 따라서 DB에는 diff 결과를 별도로 저장하지 않는다.
 
 ---
 

@@ -17,7 +17,6 @@ export interface UploadDocumentInput {
   file: File
   title: string
   type: "resume" | "portfolio"
-  resumeQuestion?: string
 }
 
 /**
@@ -48,7 +47,6 @@ export async function uploadDocument(input: UploadDocumentInput): Promise<{ docu
     type: input.type,
     status: "pending",
     version: 1,
-    resume_question: input.type === "resume" ? input.resumeQuestion : null,
     original_text: "",
     versions: [],
     comments: [],

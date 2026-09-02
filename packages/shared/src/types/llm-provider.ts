@@ -6,9 +6,7 @@ export interface LlmProvider {
   generateDocumentReview(input: {
     text: string
     documentType: "resume" | "portfolio"
-    resumeQuestion?: string
   }): Promise<{
-    reviewedText: string
     comments: Array<{ quote: string; comment: string }>
   }>
 

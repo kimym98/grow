@@ -11,9 +11,7 @@ export interface DocumentReviewRow {
   type: string
   status: string
   version: number
-  resume_question: string | null
   original_text: string
-  reviewed_text: string | null
   versions: DocumentReviewVersion[]
   comments: DocumentReviewComment[]
   created_at: string
@@ -31,9 +29,7 @@ export function rowToDocumentReview(row: DocumentReviewRow): DocumentReview {
     type: row.type as DocumentReview["type"],
     status: row.status as DocumentReview["status"],
     version: row.version,
-    resumeQuestion: row.resume_question ?? undefined,
     originalText: row.original_text,
-    reviewedText: row.reviewed_text ?? undefined,
     versions: row.versions ?? [],
     comments: row.comments ?? [],
     createdAt: row.created_at,

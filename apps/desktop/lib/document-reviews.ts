@@ -3,6 +3,17 @@ import { rowToDocumentReview, type DocumentReview, type DocumentReviewRow } from
 import { supabase } from "@/lib/supabase"
 import type { LlmProviderName } from "@/lib/llm-keys"
 
+/** 문서 첨삭 원본 PDF 다운로드/미리보기용 signed URL을 발급한다 (60초 유효) */
+export async function getDocumentReviewSignedUrl(userId: string, documentReviewId: string): Promise<string> {
+  const objectPath = `${userId}/${documentReviewId}.pdf`
+
+  const { data, error } = await supabase.storage.from("documents").createSignedUrl(objectPath, 60)
+
+  if (error) throw new Error(error.message)
+
+  return data.signedUrl
+}
+
 /** document_reviews 테이블에서 로그인한 사용자의 전체 문서를 최근 수정순으로 조회한다 (RLS로 소유자 데이터만 반환) */
 export async function fetchDocumentReviews(): Promise<DocumentReview[]> {
   const { data, error } = await supabase
