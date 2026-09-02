@@ -94,8 +94,8 @@ function MonthlyCalendarGrid({
         </Button>
       </div>
 
-      {/* 요일 헤더 */}
-      <div className="grid shrink-0 grid-cols-7 gap-px px-1 text-center text-xs font-medium text-muted-foreground sm:text-sm">
+      {/* 요일 헤더: 창이 작아져도 잘리지 않도록 기본 폰트를 더 작게 설정 */}
+      <div className="grid shrink-0 grid-cols-7 gap-px px-1 text-center text-[10px] font-medium text-muted-foreground sm:text-xs">
         {WEEKDAY_LABELS.map((label) => (
           <div key={label} aria-hidden="true">
             {label}
@@ -104,10 +104,13 @@ function MonthlyCalendarGrid({
       </div>
 
       {/* 6주 x 7일 = 42칸 그리드. 셀 사이는 얇은 구분선(gap-px + bg)으로 표현하는 노션 스타일 */}
-      <div
-        className="grid min-h-0 flex-1 grid-cols-7 gap-px overflow-hidden rounded-lg bg-border/60 ring-1 ring-border/60"
-        style={{ gridTemplateRows: `repeat(${weekCount}, minmax(0, 1fr))` }}
-      >
+      {/* 창이 작아져도 셀이 최소 크기(72px 높이 / 70px 너비) 밑으로 짜부라들지 않도록 하고,
+          그보다 창이 작아지면 이 래퍼에 가로/세로 스크롤이 생겨 잘림 없이 전체를 볼 수 있게 함 */}
+      <div className="min-h-0 flex-1 overflow-auto rounded-lg ring-1 ring-border/60">
+        <div
+          className="grid h-full min-h-[320px] min-w-[490px] grid-cols-7 gap-px bg-border/60"
+          style={{ gridTemplateRows: `repeat(${weekCount}, minmax(72px, 1fr))` }}
+        >
         {days.map((day) => {
           const daySchedules = getSchedulesForDate(day);
           const isCurrentMonth = isSameMonth(day, monthStart);
@@ -207,6 +210,7 @@ function MonthlyCalendarGrid({
             </div>
           );
         })}
+        </div>
       </div>
     </div>
   );
