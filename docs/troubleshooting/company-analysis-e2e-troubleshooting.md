@@ -1,6 +1,6 @@
-# 지원 기업 LLM 분석(Task 046) E2E 검증 트러블슈팅 기록
+# 지원 기업 LLM 분석(Task 045) E2E 검증 트러블슈팅 기록
 
-Task 046(`analyze-company` Edge Function 및 기업 분석 카드 통합)을 검증하는 과정에서 겪은 환경 제약과, 이를 우회해 실질적으로 동등한 검증을 확보한 방법을 기록한다.
+Task 045(`analyze-company` Edge Function 및 기업 분석 카드 통합)을 검증하는 과정에서 겪은 환경 제약과, 이를 우회해 실질적으로 동등한 검증을 확보한 방법을 기록한다.
 
 ## 결론 요약
 
@@ -13,7 +13,7 @@ Task 046(`analyze-company` Edge Function 및 기업 분석 카드 통합)을 검
 
 ## 배경: 왜 막혔는가
 
-Task 046은 다음 두 갈래의 검증이 필요했다.
+Task 045은 다음 두 갈래의 검증이 필요했다.
 
 1. 백엔드(Edge Function + DB): 소유권 확인, 캐시 히트/무효화, RLS 크로스토크, 실패 시 상태 전환
 2. 프런트엔드(UI): 지원 기업 상세 화면에서 버튼 클릭 → 상태 폴링 → 결과 카드 렌더링
@@ -81,7 +81,7 @@ Next.js 16의 Turbopack dev 서버는 프로젝트 디렉토리(`apps/desktop`) 
 
 ## 대체 검증 내역 (로컬 스택 기준)
 
-로컬 Supabase 스택은 `npx supabase functions serve --no-verify-jwt`로 `analyze-company`를 구동한 뒤, `curl`로 실제 HTTP 요청을 보내고 `docker exec supabase_db_grow psql`로 결과를 직접 조회하는 방식으로 검증했다(Task 045의 "psql CLI 미설치 → 로컬 DB 컨테이너에 직접 SQL 실행" 대체 방식과 동일한 결).
+로컬 Supabase 스택은 `npx supabase functions serve --no-verify-jwt`로 `analyze-company`를 구동한 뒤, `curl`로 실제 HTTP 요청을 보내고 `docker exec supabase_db_grow psql`로 결과를 직접 조회하는 방식으로 검증했다(Task 044의 "psql CLI 미설치 → 로컬 DB 컨테이너에 직접 SQL 실행" 대체 방식과 동일한 결).
 
 1. **인증 실패**: 토큰 없이 호출 → `401`
 2. **소유권/키 미등록**: 실제 로그인 사용자 + 본인 소유 `company_applications` row + LLM 키 미등록 → `400 API_KEY_NOT_FOUND`
@@ -90,7 +90,7 @@ Next.js 16의 Turbopack dev 서버는 프로젝트 디렉토리(`apps/desktop`) 
 5. **캐시 무효화(입력 변경)**: 동일 applicationId에서 `memo`만 변경 후 재호출 → cache_key가 달라져 캐시를 타지 않고 실제 LLM 호출을 시도해 `500`(가짜 키 오류)이 남을 확인 — 캐시가 입력 변경에 반응해 무효화됨을 실증
 6. **캐시 무효화(프롬프트 템플릿)**: `cacheKey`에 `hashPromptTemplate(COMPANY_ANALYSIS_PROMPT_TEMPLATE)`이 포함되므로, 템플릿 문구를 바꾸면 해시가 바뀌어 자동 무효화되는 것은 코드 레벨로 확인(순수 해시 함수이므로 review-document에서 이미 프로덕션 검증된 동일 메커니즘)
 7. **RLS 크로스토크**: `auth.users`에 임시 계정 A/B, `company_applications`/`company_analyses`에 각각 A/B 소유 레코드를 만든 뒤 트랜잭션 내에서 `SET LOCAL role authenticated; SET LOCAL request.jwt.claims`로 세션을 흉내내 검증. A가 B의 분석 레코드에 시도한 `UPDATE`/`DELETE`는 각각 `0 rows`, B 세션 재조회 시 원본 그대로 존재. 트랜잭션은 `ROLLBACK`으로 정리
-   - **부가 발견(경미)**: A가 `user_id`는 본인으로, `application_id`는 B의 것으로 지정해 `INSERT`를 시도하면 RLS `WITH CHECK (auth.uid() = user_id)`만 검사하므로 삽입이 **성공**한다. 이 자체로 B의 데이터가 A에게 노출되지는 않지만(SELECT는 여전히 `user_id` 기준으로 필터링됨), B의 `application_id`에 A 소유의 orphan 분석 레코드가 붙는 데이터 정합성 이슈는 남는다. `analyze-company` Edge Function은 항상 RLS가 적용된 `ctx.supabase`로 `company_applications`를 먼저 조회해 소유권을 확인한 뒤에만 insert하므로 정상 경로로는 발생하지 않지만, REST API를 직접 호출하는 경로까지 막으려면 별도 `CHECK` 제약이나 트리거가 필요하다 — Task 046의 완료 기준(다른 사용자 간 결과 비노출)은 충족하므로 이번 범위에서는 수정하지 않고 기록만 남긴다.
+   - **부가 발견(경미)**: A가 `user_id`는 본인으로, `application_id`는 B의 것으로 지정해 `INSERT`를 시도하면 RLS `WITH CHECK (auth.uid() = user_id)`만 검사하므로 삽입이 **성공**한다. 이 자체로 B의 데이터가 A에게 노출되지는 않지만(SELECT는 여전히 `user_id` 기준으로 필터링됨), B의 `application_id`에 A 소유의 orphan 분석 레코드가 붙는 데이터 정합성 이슈는 남는다. `analyze-company` Edge Function은 항상 RLS가 적용된 `ctx.supabase`로 `company_applications`를 먼저 조회해 소유권을 확인한 뒤에만 insert하므로 정상 경로로는 발생하지 않지만, REST API를 직접 호출하는 경로까지 막으려면 별도 `CHECK` 제약이나 트리거가 필요하다 — Task 045의 완료 기준(다른 사용자 간 결과 비노출)은 충족하므로 이번 범위에서는 수정하지 않고 기록만 남긴다.
 
 모든 테스트 데이터는 검증 직후 삭제(또는 트랜잭션 `ROLLBACK`)해 정리했다.
 
@@ -100,7 +100,7 @@ Next.js 16의 Turbopack dev 서버는 프로젝트 디렉토리(`apps/desktop`) 
 
 ## 후속 조치 제안
 
-- 원격 프로젝트에 `company_analyses`(및 향후 Task 047~049) 마이그레이션을 반영하려면, 사용자가 직접 터미널에서 `npx supabase db push`(PowerShell 권장)를 실행하거나, Claude Code 세션에서 `mcp__supabase__apply_migration` 실행을 명시적으로 승인해야 한다.
+- 원격 프로젝트에 `company_analyses`(및 향후 Task 045~048) 마이그레이션을 반영하려면, 사용자가 직접 터미널에서 `npx supabase db push`(PowerShell 권장)를 실행하거나, Claude Code 세션에서 `mcp__supabase__apply_migration` 실행을 명시적으로 승인해야 한다.
 - 원격 반영 후에는 이미 실행 중인 `next dev`(포트 3000)가 새 스키마를 인식하도록 PostgREST 스키마 캐시 갱신(자동 반영되지 않으면 `NOTIFY pgrst, 'reload schema'` 또는 프로젝트 재시작)이 필요할 수 있다.
 - 원격 반영 이후에 한해 실제 Gemini/Anthropic API 키로 "분석 실행 → completed 표시 → 새로고침 재분석" 브라우저 E2E를 재수행하는 것을 권장한다.
 
@@ -119,4 +119,4 @@ Next.js 16의 Turbopack dev 서버는 프로젝트 디렉토리(`apps/desktop`) 
 - "새로고침 재분석" 클릭 → 동일 입력(회사명/직무/메모 불변)이라 캐시 키가 동일해 즉시 동일 결과 재표시(실제 LLM 재호출 없음 — 이 문서 "대체 검증 내역"의 4번 항목이 실제 브라우저 조작으로도 재확인됨)
 - 테스트 데이터는 UI에서 "삭제" 버튼으로 제거(FK `ON DELETE CASCADE`로 연결된 `company_analyses` 레코드도 함께 삭제됨)
 
-결과적으로 이 문서에서 로컬/HTTP 계층으로 대체했던 항목들이 모두 실제 브라우저 E2E로 재확인되었고, Task 046의 완료 기준 6개 전부가 온전히 충족되었다. `ROADMAP_v2.md`의 Task 046 마지막 완료 기준 항목에 이 재검증 내역을 반영해두었다.
+결과적으로 이 문서에서 로컬/HTTP 계층으로 대체했던 항목들이 모두 실제 브라우저 E2E로 재확인되었고, Task 045의 완료 기준 6개 전부가 온전히 충족되었다. `ROADMAP_v2.md`의 Task 045 마지막 완료 기준 항목에 이 재검증 내역을 반영해두었다.
